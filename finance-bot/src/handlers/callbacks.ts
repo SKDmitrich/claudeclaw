@@ -76,13 +76,12 @@ async function handleConfirmTransaction(ctx: Context, data: string): Promise<voi
   try {
     const fintabloId = await postTransaction({
       date: txn.date!,
-      amount: Math.abs(txn.amount!) * -1,
-      account_id: txn.account_id ?? undefined,
-      category_id: txn.category_id ?? undefined,
-      direction_id: txn.direction_id ?? undefined,
-      counterparty_name: txn.counterparty_name ?? undefined,
-      description: txn.description ?? undefined,
-      currency: 'RUB',
+      value: Math.abs(txn.amount!),
+      group: 'outcome',
+      moneybagId: txn.account_id!,
+      categoryId: txn.category_id ?? undefined,
+      directionId: txn.direction_id ?? undefined,
+      description: txn.description ?? txn.counterparty_name ?? undefined,
     })
 
     updatePendingTransaction(txnId, { status: 'sent', fintablo_txn_id: fintabloId })

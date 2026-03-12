@@ -2,15 +2,14 @@ import { FINTABLO_API_TOKEN, FINTABLO_API_URL } from './config.js'
 import { logger } from './logger.js'
 
 export interface FinTabloTransactionPayload {
-  date: string
-  amount: number
-  account_id?: number
-  counterparty_id?: number
-  counterparty_name?: string
-  category_id?: number
-  direction_id?: number
+  date: string        // YYYY-MM-DD (will be converted to DD.MM.YYYY)
+  value: number       // positive number
+  group: 'outcome' | 'income' | 'transfer'
+  moneybagId: number  // account ID in FinTablo
+  categoryId?: number
+  directionId?: number
+  partnerId?: number
   description?: string
-  currency?: string
 }
 
 export interface FinTabloCategory {
@@ -68,9 +67,16 @@ async function apiRequest(method: string, path: string, body?: unknown): Promise
 }
 
 export async function postTransaction(data: FinTabloTransactionPayload): Promise<string> {
-  const result = await apiRequest('POST', '/v1/transaction', data) as { id: string }
+  // Convert date from YYYY-MM-DD to DD.MM.YYYY
+  const [y, m, d] = data.date.split('-')
+  const payload = {
+    ...data,
+    date: `${d}.${m}.${y}`,
+  }
+  logger.info({ payload }, 'Sending to FinTablo')
+  const result = await apiRequest('POST', '/v1/transaction', payload) as { id: number }
   logger.info({ id: result.id }, 'Created FinTablo transaction')
-  return result.id
+  return String(result.id)
 }
 
 export async function getCategories(forceRefresh = false): Promise<FinTabloCategory[]> {
