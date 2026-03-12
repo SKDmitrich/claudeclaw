@@ -14,6 +14,12 @@ export function createBot(): Bot {
     await next()
   })
 
+  // Register commands for Telegram menu button
+  bot.api.setMyCommands([
+    { command: 'start', description: 'Начать / Инструкция' },
+    { command: 'admin', description: 'Панель администратора' },
+  ])
+
   // Commands
   bot.command('start', startHandler)
   bot.command('admin', adminMenuHandler)
