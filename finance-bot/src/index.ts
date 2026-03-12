@@ -111,7 +111,34 @@ async function main() {
     }
   }
 
-  startPolling(handleNewTransaction, handleAuthError, handleAccountsSync)
+  const handleCrossDirectionTransfer = async (txn: ZenMoneyTransaction) => {
+    const outcomeCard = getCardByZenmoneyAccount(txn.outcomeAccount)
+    const incomeCard = getCardByZenmoneyAccount(txn.incomeAccount)
+
+    // Both accounts must be linked cards with directions
+    if (!outcomeCard?.direction_id || !incomeCard?.direction_id) return
+    // Same direction -- ok
+    if (outcomeCard.direction_id === incomeCard.direction_id) return
+
+    const fromDir = getAllDirections().find(d => d.id === outcomeCard.direction_id)
+    const toDir = getAllDirections().find(d => d.id === incomeCard.direction_id)
+
+    try {
+      await bot.api.sendMessage(
+        ADMIN_CHAT_ID,
+        `Перевод между разными направлениями!\n\n` +
+        `${txn.outcome}₽ | ${txn.date}\n` +
+        `Откуда: ${outcomeCard.fintablo_account_name} (${fromDir?.name ?? '?'})\n` +
+        `Куда: ${incomeCard.fintablo_account_name} (${toDir?.name ?? '?'})\n\n` +
+        `Проверь в FinTабло.`
+      )
+      logger.warn({ txnId: txn.id, from: fromDir?.name, to: toDir?.name, amount: txn.outcome }, 'Cross-direction transfer detected')
+    } catch (err) {
+      logger.error({ err }, 'Failed to notify admin about cross-direction transfer')
+    }
+  }
+
+  startPolling(handleNewTransaction, handleAuthError, handleAccountsSync, handleCrossDirectionTransfer)
   logger.info('ZenMoney polling started')
 
   // Daily reminder at 10:00 Moscow time for unprocessed transactions

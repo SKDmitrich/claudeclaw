@@ -30,7 +30,7 @@ const API_URL = 'https://api.zenmoney.ru/v8/diff/'
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let polling = false
 
-export async function fetchNewTransactions(): Promise<{ transactions: ZenMoneyTransaction[]; accounts: Array<{ id: string; title: string; syncID: string[] | null }> }> {
+export async function fetchNewTransactions(): Promise<{ transactions: ZenMoneyTransaction[]; transfers: ZenMoneyTransaction[]; accounts: Array<{ id: string; title: string; syncID: string[] | null }> }> {
   const lastTs = getSyncState('last_server_timestamp') ?? '0'
 
   const response = await fetch(API_URL, {
@@ -57,17 +57,20 @@ export async function fetchNewTransactions(): Promise<{ transactions: ZenMoneyTr
 
   setSyncState('last_server_timestamp', String(data.serverTimestamp))
 
-  const transactions = (data.transaction ?? []).filter(t =>
-    !t.deleted && t.outcome > 0
-  )
+  const allTxns = (data.transaction ?? []).filter(t => !t.deleted)
 
-  return { transactions, accounts: data.account ?? [] }
+  // Separate expenses (outcome only) from transfers (both income and outcome)
+  const transactions = allTxns.filter(t => t.outcome > 0 && t.income === 0)
+  const transfers = allTxns.filter(t => t.outcome > 0 && t.income > 0)
+
+  return { transactions, transfers, accounts: data.account ?? [] }
 }
 
 export function startPolling(
   onNewTransaction: (txn: ZenMoneyTransaction) => Promise<void>,
   onAuthError: () => void,
-  onAccountsSync?: (accounts: Array<{ id: string; title: string; syncID: string[] | null }>) => void
+  onAccountsSync?: (accounts: Array<{ id: string; title: string; syncID: string[] | null }>) => void,
+  onCrossDirectionTransfer?: (txn: ZenMoneyTransaction) => Promise<void>
 ): void {
   if (polling) return
   polling = true
@@ -75,11 +78,21 @@ export function startPolling(
   const poll = async () => {
     try {
       logger.info('ZenMoney: polling for new transactions...')
-      const { transactions, accounts } = await fetchNewTransactions()
-      logger.info({ count: transactions.length }, 'ZenMoney: got transactions')
+      const { transactions, transfers, accounts } = await fetchNewTransactions()
+      logger.info({ count: transactions.length, transfers: transfers.length }, 'ZenMoney: got transactions')
 
       if (accounts.length > 0 && onAccountsSync) {
         onAccountsSync(accounts)
+      }
+
+      if (transfers.length > 0 && onCrossDirectionTransfer) {
+        for (const txn of transfers) {
+          try {
+            await onCrossDirectionTransfer(txn)
+          } catch (err) {
+            logger.error({ err, txnId: txn.id }, 'Error checking cross-direction transfer')
+          }
+        }
       }
 
       for (const txn of transactions) {
