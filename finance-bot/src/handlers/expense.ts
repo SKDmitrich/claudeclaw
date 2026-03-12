@@ -13,8 +13,65 @@ import { ADMIN_CHAT_ID } from '../config.js'
 import { logger } from '../logger.js'
 import { transcribeVoice } from '../voice.js'
 
+const MONTHS_RU: Record<string, string> = {
+  'января': '01', 'февраля': '02', 'марта': '03', 'апреля': '04',
+  'мая': '05', 'июня': '06', 'июля': '07', 'августа': '08',
+  'сентября': '09', 'октября': '10', 'ноября': '11', 'декабря': '12',
+  'янв': '01', 'фев': '02', 'мар': '03', 'апр': '04',
+  'май': '05', 'июн': '06', 'июл': '07', 'авг': '08',
+  'сен': '09', 'окт': '10', 'ноя': '11', 'дек': '12',
+}
+
+/** Parse date string to YYYY-MM-DD or return null if unparseable */
+function parseDate(raw: string): string | null {
+  const s = raw.trim().toLowerCase()
+
+  // "сегодня"
+  if (s === 'сегодня') {
+    return new Date().toISOString().slice(0, 10)
+  }
+  // "вчера"
+  if (s === 'вчера') {
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    return d.toISOString().slice(0, 10)
+  }
+
+  // YYYY-MM-DD
+  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (isoMatch) return s
+
+  // DD.MM.YYYY or DD/MM/YYYY
+  const dotMatch = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/)
+  if (dotMatch) {
+    const [, dd, mm, yyyy] = dotMatch
+    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
+  }
+
+  // DD.MM (current year)
+  const shortDotMatch = s.match(/^(\d{1,2})[./](\d{1,2})$/)
+  if (shortDotMatch) {
+    const [, dd, mm] = shortDotMatch
+    const yyyy = new Date().getFullYear()
+    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
+  }
+
+  // "12 марта 2026", "12 мар 2026", "12 марта"
+  const ruMatch = s.match(/^(\d{1,2})\s+([а-яё]+)(?:\s+(\d{4}))?$/)
+  if (ruMatch) {
+    const [, dd, monthStr, yearStr] = ruMatch
+    const mm = MONTHS_RU[monthStr]
+    if (mm) {
+      const yyyy = yearStr ?? String(new Date().getFullYear())
+      return `${yyyy}-${mm}-${dd.padStart(2, '0')}`
+    }
+  }
+
+  return null
+}
+
 const FIELD_LABELS: Record<MissingField, string> = {
-  date: 'Дата (ГГГГ-ММ-ДД)',
+  date: 'Дата (ДД.ММ.ГГГГ, "12 марта 2026", "вчера", "сегодня")',
   amount: 'Сумма',
   account_info: 'Счет или карта',
   category: 'Статья расходов',
@@ -193,7 +250,7 @@ async function handleExpenseDescription(
 
   let updates: Partial<PendingTransaction> = {
     status: 'enriched',
-    date: extracted.date ?? txn.date,
+    date: (extracted.date ? parseDate(extracted.date) ?? extracted.date : null) ?? txn.date,
     amount: preParsedAmount ?? extracted.amount ?? txn.amount,
     category_id: extracted.category_id ?? txn.category_id,
     category_name: extracted.category_name ?? txn.category_name,
@@ -233,9 +290,15 @@ async function handleFillingField(
 
   const update: Partial<PendingTransaction> = {}
   switch (field) {
-    case 'date':
-      update.date = text.trim()
+    case 'date': {
+      const parsed = parseDate(text)
+      if (!parsed) {
+        await ctx.reply('Не могу разобрать дату. Допустимые форматы:\n12.03.2026, 12/03/2026, 2026-03-12, 12 марта 2026, 12 мар, вчера, сегодня')
+        return
+      }
+      update.date = parsed
       break
+    }
     case 'amount': {
       const num = parseFloat(text.replace(/\s/g, '').replace(',', '.'))
       if (isNaN(num)) {
@@ -326,7 +389,7 @@ async function handleManualEntry(
   let data: Record<string, unknown> = {
     manager_id: managerId,
     amount: preParsedAmount ?? extracted.amount,
-    date: extracted.date,
+    date: extracted.date ? parseDate(extracted.date) ?? extracted.date : null,
     account_info: extracted.account_name,
     category_id: extracted.category_id,
     category_name: extracted.category_name,
