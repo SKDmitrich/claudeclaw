@@ -5,6 +5,7 @@ import {
   createManager, getManagerByTelegramId,
   getPendingTransaction, updatePendingTransaction,
   createPendingTransaction, getAllDirections, getAllCards,
+  getCardsByManagerId,
   type PendingTransaction,
 } from '../db.js'
 import { extractExpenseFields } from '../ai.js'
@@ -21,19 +22,18 @@ const FIELD_LABELS: Record<MissingField, string> = {
   counterparty: 'Контрагент (кому/от кого)',
 }
 
-// Manager categories (from FinTablo)
+// Manager categories (from FinTablo) -- short names for callback_data
 const MANAGER_CATEGORIES = [
   { id: 1045100, name: 'Самовыкупы' },
   { id: 1045121, name: 'Фотоконтент' },
-  { id: 1045119, name: 'Расходы на ПО и сервисы' },
-  { id: 1045095, name: 'Логистика не входящая в с/с' },
+  { id: 1045119, name: 'ПО и сервисы' },
+  { id: 1045095, name: 'Логистика' },
 ]
 
 export async function expenseHandler(ctx: Context): Promise<void> {
   const userId = ctx.from?.id
   if (!userId) return
 
-  // Handle voice messages
   if (ctx.message?.voice) {
     await handleVoiceMessage(ctx, userId)
     return
@@ -124,6 +124,32 @@ async function handleRegistrationName(ctx: Context, userId: number, name: string
   }
 }
 
+// ─── Auto-fill account & direction from manager's linked card ───────────────
+
+function autoFillFromManager(managerId: number, txn: Partial<PendingTransaction>): Partial<PendingTransaction> {
+  const cards = getCardsByManagerId(managerId)
+  if (cards.length === 0) return txn
+
+  const card = cards[0] // Primary linked card
+  const result = { ...txn }
+
+  if (!result.account_info && !result.account_id) {
+    result.account_id = card.fintablo_account_id
+    result.account_info = card.fintablo_account_name
+  }
+
+  if (!result.direction_id && card.direction_id) {
+    const dirs = getAllDirections()
+    const dir = dirs.find(d => d.id === card.direction_id)
+    if (dir) {
+      result.direction_id = dir.fintablo_direction_id
+      result.direction_name = dir.name
+    }
+  }
+
+  return result
+}
+
 // ─── Expense description (from ZenMoney polling) ────────────────────────────
 
 async function handleExpenseDescription(
@@ -147,7 +173,7 @@ async function handleExpenseDescription(
     accountName: txn.account_info ?? undefined,
   })
 
-  updatePendingTransaction(txnId, {
+  let updates: Partial<PendingTransaction> = {
     status: 'enriched',
     date: extracted.date ?? txn.date,
     amount: extracted.amount ?? txn.amount,
@@ -157,7 +183,15 @@ async function handleExpenseDescription(
     direction_name: extracted.direction_name,
     counterparty_name: extracted.counterparty_name,
     description: extracted.description,
-  })
+    account_info: txn.account_info,
+    account_id: txn.account_id,
+  }
+
+  if (txn.manager_id) {
+    updates = autoFillFromManager(txn.manager_id, updates)
+  }
+
+  updatePendingTransaction(txnId, updates)
 
   const updated = getPendingTransaction(txnId)!
   await checkAndAskMissing(ctx, userId, updated)
@@ -218,25 +252,37 @@ export async function handleFieldPickerCallback(ctx: Context, data: string): Pro
   if (!userId) return
 
   const state = userStates.get(userId)
-  if (!state || state.type !== 'filling_missing_field') return
 
+  // Handle edit_ callbacks (from confirmation screen)
+  if (data.startsWith('edit_')) {
+    const parts = data.split(':')
+    const field = parts[0].replace('edit_', '') as MissingField
+    const txnId = parseInt(parts[1], 10)
+    userStates.set(userId, { type: 'filling_missing_field', txnId, field, remaining: [] })
+    await askForField(ctx, userId, txnId, field, [])
+    return
+  }
+
+  if (!state || state.type !== 'filling_missing_field') return
   const { txnId, remaining } = state
 
   if (data.startsWith('pick_cat:')) {
-    const parts = data.replace('pick_cat:', '').split(':')
-    const catId = parseInt(parts[0], 10)
-    const catName = parts.slice(1).join(':')
-    updatePendingTransaction(txnId, { category_id: catId, category_name: catName })
+    const [, idStr, ...rest] = data.split(':')
+    const catId = parseInt(idStr, 10)
+    const cat = MANAGER_CATEGORIES.find(c => c.id === catId)
+    updatePendingTransaction(txnId, { category_id: catId, category_name: cat?.name ?? rest.join(':') })
   } else if (data.startsWith('pick_dir:')) {
-    const parts = data.replace('pick_dir:', '').split(':')
-    const dirId = parseInt(parts[0], 10)
-    const dirName = parts.slice(1).join(':')
-    updatePendingTransaction(txnId, { direction_id: dirId, direction_name: dirName })
+    const [, idStr] = data.split(':')
+    const dirId = parseInt(idStr, 10)
+    const dirs = getAllDirections()
+    const dir = dirs.find(d => (d.fintablo_direction_id ?? d.id) === dirId)
+    updatePendingTransaction(txnId, { direction_id: dirId, direction_name: dir?.name ?? String(dirId) })
   } else if (data.startsWith('pick_acc:')) {
-    const parts = data.replace('pick_acc:', '').split(':')
-    const accId = parseInt(parts[0], 10)
-    const accName = parts.slice(1).join(':')
-    updatePendingTransaction(txnId, { account_id: accId, account_info: accName })
+    const [, idStr] = data.split(':')
+    const accId = parseInt(idStr, 10)
+    const cards = getAllCards()
+    const card = cards.find(c => c.fintablo_account_id === accId)
+    updatePendingTransaction(txnId, { account_id: accId, account_info: card?.fintablo_account_name ?? String(accId) })
   }
 
   await ctx.editMessageText('Выбрано.')
@@ -255,7 +301,7 @@ async function handleManualEntry(
 
   const extracted = await extractExpenseFields(text)
 
-  const txnId = createPendingTransaction({
+  let data: Record<string, unknown> = {
     manager_id: managerId,
     amount: extracted.amount,
     date: extracted.date,
@@ -266,8 +312,12 @@ async function handleManualEntry(
     direction_name: extracted.direction_name,
     counterparty_name: extracted.counterparty_name,
     description: extracted.description,
-  })
+  }
 
+  // Auto-fill account & direction from linked card
+  data = autoFillFromManager(managerId, data as Partial<PendingTransaction>)
+
+  const txnId = createPendingTransaction(data as Parameters<typeof createPendingTransaction>[0])
   updatePendingTransaction(txnId, { status: 'enriched' })
 
   const updated = getPendingTransaction(txnId)!
@@ -313,16 +363,13 @@ async function checkAndAskMissing(ctx: Context, userId: number, txn: PendingTran
 }
 
 async function askNextMissing(ctx: Context, userId: number, txnId: number, remaining: MissingField[]): Promise<void> {
-  if (remaining.length > 0) {
-    await askForField(ctx, userId, txnId, remaining[0], remaining.slice(1))
+  const updated = getPendingTransaction(txnId)!
+  const stillMissing = getMissingFields(updated)
+
+  if (stillMissing.length === 0) {
+    await showConfirmation(ctx, userId, updated)
   } else {
-    const updated = getPendingTransaction(txnId)!
-    const stillMissing = getMissingFields(updated)
-    if (stillMissing.length > 0) {
-      await askForField(ctx, userId, txnId, stillMissing[0], stillMissing.slice(1))
-    } else {
-      await showConfirmation(ctx, userId, updated)
-    }
+    await askForField(ctx, userId, txnId, stillMissing[0], stillMissing.slice(1))
   }
 }
 
@@ -335,11 +382,10 @@ async function askForField(
 ): Promise<void> {
   userStates.set(userId, { type: 'filling_missing_field', txnId, field, remaining })
 
-  // Fields with button pickers
   if (field === 'category') {
     const keyboard = new InlineKeyboard()
     for (const cat of MANAGER_CATEGORIES) {
-      keyboard.text(cat.name, `pick_cat:${cat.id}:${cat.name}`).row()
+      keyboard.text(cat.name, `pick_cat:${cat.id}`).row()
     }
     await ctx.reply('Выбери статью:', { reply_markup: keyboard })
     return
@@ -349,7 +395,7 @@ async function askForField(
     const dirs = getAllDirections()
     const keyboard = new InlineKeyboard()
     for (const d of dirs) {
-      keyboard.text(d.name, `pick_dir:${d.fintablo_direction_id ?? d.id}:${d.name}`).row()
+      keyboard.text(d.name, `pick_dir:${d.fintablo_direction_id ?? d.id}`).row()
     }
     await ctx.reply('Выбери направление:', { reply_markup: keyboard })
     return
@@ -360,14 +406,13 @@ async function askForField(
     if (cards.length > 0) {
       const keyboard = new InlineKeyboard()
       for (const c of cards) {
-        keyboard.text(c.fintablo_account_name, `pick_acc:${c.fintablo_account_id}:${c.fintablo_account_name}`).row()
+        keyboard.text(c.fintablo_account_name, `pick_acc:${c.fintablo_account_id}`).row()
       }
       await ctx.reply('Выбери счет/карту:', { reply_markup: keyboard })
       return
     }
   }
 
-  // Text input for other fields
   await ctx.reply(`${FIELD_LABELS[field]}:`, { reply_markup: { force_reply: true } })
 }
 
@@ -377,6 +422,8 @@ async function showConfirmation(ctx: Context, userId: number, txn: PendingTransa
   const keyboard = new InlineKeyboard()
     .text('Подтвердить', `confirm_txn:${txn.id}`)
     .text('Отменить', `cancel_txn:${txn.id}`)
+    .row()
+    .text('Редактировать', `edit_menu:${txn.id}`)
 
   const lines = [
     'Проверь операцию:',
@@ -391,6 +438,51 @@ async function showConfirmation(ctx: Context, userId: number, txn: PendingTransa
   ]
 
   await ctx.reply(lines.join('\n'), { reply_markup: keyboard })
+}
+
+// ─── Edit menu handler ──────────────────────────────────────────────────────
+
+export async function handleEditMenuCallback(ctx: Context, data: string): Promise<void> {
+  const txnId = parseInt(data.replace('edit_menu:', ''), 10)
+
+  const keyboard = new InlineKeyboard()
+    .text('Дата', `edit_date:${txnId}`).text('Сумма', `edit_amount:${txnId}`).row()
+    .text('Счет', `edit_account_info:${txnId}`).text('Статья', `edit_category:${txnId}`).row()
+    .text('Направление', `edit_direction:${txnId}`).text('Контрагент', `edit_counterparty:${txnId}`).row()
+    .text('« Назад', `back_confirm:${txnId}`)
+
+  await ctx.editMessageText('Что исправить?', { reply_markup: keyboard })
+}
+
+export async function handleBackToConfirmCallback(ctx: Context, data: string): Promise<void> {
+  const userId = ctx.from?.id
+  if (!userId) return
+
+  const txnId = parseInt(data.replace('back_confirm:', ''), 10)
+  const txn = getPendingTransaction(txnId)
+  if (!txn) return
+
+  userStates.delete(userId)
+
+  const keyboard = new InlineKeyboard()
+    .text('Подтвердить', `confirm_txn:${txn.id}`)
+    .text('Отменить', `cancel_txn:${txn.id}`)
+    .row()
+    .text('Редактировать', `edit_menu:${txn.id}`)
+
+  const lines = [
+    'Проверь операцию:',
+    '',
+    `Дата: ${txn.date}`,
+    `Сумма: ${txn.amount}₽`,
+    `Счет: ${txn.account_info ?? '?'}`,
+    `Статья: ${txn.category_name ?? '?'}`,
+    `Направление: ${txn.direction_name ?? '?'}`,
+    `Контрагент: ${txn.counterparty_name ?? '?'}`,
+    `Описание: ${txn.description ?? ''}`,
+  ]
+
+  await ctx.editMessageText(lines.join('\n'), { reply_markup: keyboard })
 }
 
 // ─── Queue management ───────────────────────────────────────────────────────

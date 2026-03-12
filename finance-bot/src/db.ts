@@ -238,6 +238,12 @@ export function unlinkCardManager(fintabloAccountId: number): void {
     .run(fintabloAccountId)
 }
 
+export function getCardsByManagerId(managerId: number): Card[] {
+  return getDb()
+    .prepare('SELECT * FROM cards WHERE manager_id = ?')
+    .all(managerId) as Card[]
+}
+
 export function deleteCard(id: number): void {
   getDb().prepare('DELETE FROM cards WHERE id = ?').run(id)
 }
