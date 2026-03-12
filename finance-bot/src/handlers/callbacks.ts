@@ -3,7 +3,7 @@ import {
   setManagerStatus, getManagerById,
   getPendingTransaction, updatePendingTransaction,
 } from '../db.js'
-import { postTransaction } from '../fintablo.js'
+import { postTransaction, findOrCreatePartner } from '../fintablo.js'
 import { logger } from '../logger.js'
 import { userStates } from '../state.js'
 import { processNextInQueue, handleFieldPickerCallback, handleEditMenuCallback, handleBackToConfirmCallback } from './expense.js'
@@ -74,6 +74,11 @@ async function handleConfirmTransaction(ctx: Context, data: string): Promise<voi
   updatePendingTransaction(txnId, { status: 'confirmed' })
 
   try {
+    let partnerId: number | undefined
+    if (txn.counterparty_name) {
+      partnerId = await findOrCreatePartner(txn.counterparty_name)
+    }
+
     const fintabloId = await postTransaction({
       date: txn.date!,
       value: Math.abs(txn.amount!),
@@ -81,7 +86,8 @@ async function handleConfirmTransaction(ctx: Context, data: string): Promise<voi
       moneybagId: txn.account_id!,
       categoryId: txn.category_id ?? undefined,
       directionId: txn.direction_id ?? undefined,
-      description: txn.description ?? txn.counterparty_name ?? undefined,
+      partnerId,
+      description: txn.description ?? undefined,
     })
 
     updatePendingTransaction(txnId, { status: 'sent', fintablo_txn_id: fintabloId })

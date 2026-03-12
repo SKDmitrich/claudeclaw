@@ -39,6 +39,14 @@ export interface FinTabloGroup {
   name: string
 }
 
+export interface FinTabloPartner {
+  id: number
+  name: string
+  groupId: number | null
+  inn: string
+}
+
+let partnersCache: FinTabloPartner[] | null = null
 let categoriesCache: FinTabloCategory[] | null = null
 let directionsCache: FinTabloDirection[] | null = null
 let accountsCache: FinTabloAccount[] | null = null
@@ -114,6 +122,29 @@ export async function getAccounts(forceRefresh = false): Promise<FinTabloAccount
   const result = await apiRequest('GET', '/v1/moneybag') as { items: FinTabloAccount[] }
   accountsCache = result.items.filter(a => !a.archived)
   return accountsCache
+}
+
+export async function getPartners(forceRefresh = false): Promise<FinTabloPartner[]> {
+  if (partnersCache && !forceRefresh) return partnersCache
+  const result = await apiRequest('GET', '/v1/partner') as { items: FinTabloPartner[] }
+  partnersCache = result.items
+  return result.items
+}
+
+export async function createPartner(name: string): Promise<number> {
+  const result = await apiRequest('POST', '/v1/partner', { name }) as { items: Array<{ id: number }> }
+  const id = result.items[0].id
+  partnersCache = null // invalidate cache
+  logger.info({ id, name }, 'Created FinTablo partner')
+  return id
+}
+
+export async function findOrCreatePartner(name: string): Promise<number> {
+  const partners = await getPartners()
+  const normalized = name.toLowerCase().trim()
+  const existing = partners.find(p => p.name.toLowerCase().trim() === normalized)
+  if (existing) return existing.id
+  return createPartner(name)
 }
 
 export async function getGroups(forceRefresh = false): Promise<FinTabloGroup[]> {

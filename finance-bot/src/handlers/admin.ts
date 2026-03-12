@@ -7,7 +7,7 @@ import {
   getUnsentConfirmedTransactions, updatePendingTransaction,
   getActiveManagers,
 } from '../db.js'
-import { getAccounts, postTransaction, type FinTabloAccount } from '../fintablo.js'
+import { getAccounts, postTransaction, findOrCreatePartner, type FinTabloAccount } from '../fintablo.js'
 import { logger } from '../logger.js'
 
 function adminOnly(ctx: Context): boolean {
@@ -225,6 +225,10 @@ async function retryUnsent(ctx: Context): Promise<void> {
   let failed = 0
   for (const txn of unsent) {
     try {
+      let partnerId: number | undefined
+      if (txn.counterparty_name) {
+        partnerId = await findOrCreatePartner(txn.counterparty_name)
+      }
       const fintabloId = await postTransaction({
         date: txn.date!,
         value: Math.abs(txn.amount!),
@@ -232,7 +236,8 @@ async function retryUnsent(ctx: Context): Promise<void> {
         moneybagId: txn.account_id!,
         categoryId: txn.category_id ?? undefined,
         directionId: txn.direction_id ?? undefined,
-        description: txn.description ?? txn.counterparty_name ?? undefined,
+        partnerId,
+        description: txn.description ?? undefined,
       })
       updatePendingTransaction(txn.id, { status: 'sent', fintablo_txn_id: fintabloId })
       sent++
