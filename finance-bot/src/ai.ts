@@ -1,15 +1,20 @@
 import { OPENROUTER_API_KEY } from './config.js'
 import { logger } from './logger.js'
 
+export interface ExtractedField<T> {
+  value: T | null
+  confident: boolean
+}
+
 export interface ExtractedExpense {
-  date: string | null
-  amount: number | null
-  account_name: string | null
-  category_id: number | null
-  category_name: string | null
-  direction_id: number | null
-  direction_name: string | null
-  counterparty_name: string | null
+  date: ExtractedField<string>
+  amount: ExtractedField<number>
+  account_name: ExtractedField<string>
+  category_id: ExtractedField<number>
+  category_name: ExtractedField<string>
+  direction_id: ExtractedField<number>
+  direction_name: ExtractedField<string>
+  counterparty_name: ExtractedField<string>
   description: string
 }
 
@@ -17,22 +22,50 @@ interface TransactionContext {
   amount?: number
   date?: string
   accountName?: string
+  directionName?: string
 }
 
-const SYSTEM_PROMPT = `Ты финансовый ассистент компании Sofiny. Извлеки ВСЕ поля финансовой операции из текста пользователя.
+const SYSTEM_PROMPT = `Ты финансовый ассистент компании. Извлеки поля операции из текста менеджера.
 
-Обязательные поля: date, amount, account_name (счет/карта), category_id, direction_id, counterparty_name (контрагент), description.
+Для каждого поля верни value и confident (true если уверен на 80%+, false если угадываешь).
 
-Счета: 115516:ВТБ Бизнес (Кузнецов С.Д.), 118769:Сбер Нак (Кузнецов С.Д.), 119277:ВТБ карта (Кузнецов С.Д.), 119280:Сбер карта (Унжакова В.С.), 119281:Т-Банк Совм (Унжакова В.С.), 124440:Т-Банк Совм (Кузнецов С.Д.), 126356:Сбер карта (Кузнецова Н.Л.), 127434:Сбер Пост (Кузнецов С.Д.), 143461:Сбер Пост (Унжакова В.С.), 143475:Т-Банк Совм (Кузнецова Н.Л.), 143655:СберБизнес (Кузнецов С.Д.), 148716:СберБизнес (Унжакова В.С.), 149282:Сбер Нак (Кузнецова Н.Л.), 149283:Сбер карта (Кузнецов С.Д.), 149558:Сбер Нак (Унжакова), 154253:Сбер Депозит (Кузнецов С.Д.), 154254:Сбер Депозит (Унжакова В.С.), 154257:Точка Депозит (Кузнецова Н.Л.), 154258:ВТБ Депозит (Кузнецов С.Д.), 156762:Наличка (Кузнецов С.Д.)
+Статьи расходов менеджеров (category_id : название):
+1045100 : Самовыкупы
+1045121 : Фотоконтент
+1045119 : Расходы на ПО и сервисы
+1045095 : Логистика
+1342729 : Брак
+1045094 : Упаковка
+1327155 : Упаковка не вх с/с
 
-Статьи: 1043939:Неразнесенное поступление(income), 1043940:Неразнесенное списание(outcome), 1043941:Перевод между счетами(transfer), 1043942:Конвертация валют(transfer), 1043943:Ввод средств(income), 1043944:Вывод прибыли(outcome), 1043945:Налоги на доходы (прибыль)(outcome), 1043946:Налоги за сотрудников(outcome), 1043947:НДФЛ(outcome), 1043948:Взносы в фонды(outcome), 1043949:Получение кредита(income), 1043950:Выплата тела кредита(outcome), 1043951:Проценты по кредиту(outcome), 1043953:Закупки(outcome), 1043954:Покупка основных средств(outcome), 1043955:Продажа основных средств(income), 1044167:Поступления от МП(income), 1045091:Прочий доход(income), 1045093:Сертификация товара(outcome), 1045094:Покупка упаковки(outcome), 1045095:Логистические расходы(outcome), 1045100:Самовыкупы(outcome), 1045103:РКО(outcome), 1045111:Обучение персонала(outcome), 1045113:Командировки(outcome), 1045114:Представительские расходы(outcome), 1045115:Поиск и найм персонала(outcome), 1045117:Реклама и маркетинг(outcome), 1045119:Расходы на ПО и сервисы(outcome), 1045120:Административные и юридические расходы(outcome)
+Направления (direction_id : название):
+98224 : WB (Кузнецов С.Д.)
+99106 : WB (Кузнецова Н.Л.)
+99103 : WB (Унжакова В.С.)
+99105 : OZON (Унжакова В.С.)
+99857 : OZON (Кузнецов С.Д.)
 
-Направления: 1:WB (Кузнецов С.Д.), 2:WB (Кузнецова Н.Л.), 3:WB (Унжакова В.С.)
+Правила:
+- date: если не указана явно, используй сегодня. Формат YYYY-MM-DD
+- amount: число в рублях. Если указано "500 руб" или "1200₽" -- извлеки число
+- category: определи по описанию (СДЭК/почта/ПЭК → Логистика, WB/самовыкуп → Самовыкупы, фото/съемка → Фотоконтент, пленка/коробки → Упаковка, подписка/сервис → ПО и сервисы, брак → Брак)
+- counterparty_name: кому заплатили (СДЭК, Wildberries, OZON и т.д.)
+- description: краткое описание операции
+- direction: определи только если есть явное указание. Если менеджер не указал направление, ставь null
+- account_name: обычно не указывается, ставь null
 
-Если дата не указана, используй сегодня.
-Если поле невозможно определить, поставь null.
 Верни ТОЛЬКО JSON без markdown:
-{"date":"YYYY-MM-DD","amount":число или null,"account_name":"название счета" или null,"category_id":число или null,"category_name":"название","direction_id":число или null,"direction_name":"название","counterparty_name":"контрагент" или null,"description":"описание"}`
+{
+  "date": {"value": "2026-03-12", "confident": true},
+  "amount": {"value": 500, "confident": true},
+  "category_id": {"value": 1045095, "confident": true},
+  "category_name": {"value": "Логистика", "confident": true},
+  "direction_id": {"value": null, "confident": false},
+  "direction_name": {"value": null, "confident": false},
+  "counterparty_name": {"value": "СДЭК", "confident": true},
+  "account_name": {"value": null, "confident": false},
+  "description": "Доставка СДЭК"
+}`
 
 export async function extractExpenseFields(
   text: string,
@@ -44,6 +77,7 @@ export async function extractExpenseFields(
     if (context.amount) parts.push(`Сумма: ${context.amount} RUB`)
     if (context.date) parts.push(`Дата: ${context.date}`)
     if (context.accountName) parts.push(`Счет: ${context.accountName}`)
+    if (context.directionName) parts.push(`Направление: ${context.directionName}`)
     if (parts.length > 0) {
       userMessage = `${parts.join(', ')}. Описание менеджера: ${text}`
     }
@@ -73,30 +107,38 @@ export async function extractExpenseFields(
 
     const content = data.choices?.[0]?.message?.content ?? '{}'
     const cleaned = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim()
-    const parsed = JSON.parse(cleaned) as ExtractedExpense
+    const parsed = JSON.parse(cleaned)
+
+    const field = <T>(raw: unknown, fallback: T | null = null): ExtractedField<T> => {
+      if (raw && typeof raw === 'object' && 'value' in raw) {
+        const obj = raw as { value: T | null; confident?: boolean }
+        return { value: obj.value ?? fallback, confident: obj.confident ?? false }
+      }
+      return { value: (raw as T) ?? fallback, confident: false }
+    }
 
     return {
-      date: parsed.date ?? null,
-      amount: parsed.amount ?? null,
-      account_name: parsed.account_name ?? null,
-      category_id: parsed.category_id ?? null,
-      category_name: parsed.category_name ?? null,
-      direction_id: parsed.direction_id ?? null,
-      direction_name: parsed.direction_name ?? null,
-      counterparty_name: parsed.counterparty_name ?? null,
+      date: field<string>(parsed.date),
+      amount: field<number>(parsed.amount),
+      account_name: field<string>(parsed.account_name),
+      category_id: field<number>(parsed.category_id),
+      category_name: field<string>(parsed.category_name),
+      direction_id: field<number>(parsed.direction_id),
+      direction_name: field<string>(parsed.direction_name),
+      counterparty_name: field<string>(parsed.counterparty_name),
       description: parsed.description ?? text,
     }
   } catch (err) {
     logger.error({ err }, 'AI extraction failed')
     return {
-      date: null,
-      amount: null,
-      account_name: null,
-      category_id: null,
-      category_name: null,
-      direction_id: null,
-      direction_name: null,
-      counterparty_name: null,
+      date: { value: null, confident: false },
+      amount: { value: null, confident: false },
+      account_name: { value: null, confident: false },
+      category_id: { value: null, confident: false },
+      category_name: { value: null, confident: false },
+      direction_id: { value: null, confident: false },
+      direction_name: { value: null, confident: false },
+      counterparty_name: { value: null, confident: false },
       description: text,
     }
   }

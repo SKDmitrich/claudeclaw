@@ -242,21 +242,24 @@ async function handleExpenseDescription(
   await ctx.replyWithChatAction('typing')
 
   const { amount: preParsedAmount, cleanText } = preParseAmount(text)
+  const dir = txn.direction_name ?? undefined
   const extracted = await extractExpenseFields(cleanText, {
     amount: preParsedAmount ?? txn.amount ?? undefined,
     date: txn.date ?? undefined,
     accountName: txn.account_info ?? undefined,
+    directionName: dir,
   })
 
+  // Only use AI values where confident, keep existing values otherwise
   let updates: Partial<PendingTransaction> = {
     status: 'enriched',
-    date: (extracted.date ? parseDate(extracted.date) ?? extracted.date : null) ?? txn.date,
-    amount: preParsedAmount ?? extracted.amount ?? txn.amount,
-    category_id: extracted.category_id ?? txn.category_id,
-    category_name: extracted.category_name ?? txn.category_name,
-    direction_id: txn.direction_id ?? extracted.direction_id,
-    direction_name: txn.direction_name ?? extracted.direction_name,
-    counterparty_name: extracted.counterparty_name ?? txn.counterparty_name,
+    date: txn.date ?? (extracted.date.confident ? parseDate(extracted.date.value ?? '') ?? extracted.date.value : null),
+    amount: preParsedAmount ?? (extracted.amount.confident ? extracted.amount.value : null) ?? txn.amount,
+    category_id: txn.category_id ?? (extracted.category_id.confident ? extracted.category_id.value : null),
+    category_name: txn.category_name ?? (extracted.category_name.confident ? extracted.category_name.value : null),
+    direction_id: txn.direction_id ?? (extracted.direction_id.confident ? extracted.direction_id.value : null),
+    direction_name: txn.direction_name ?? (extracted.direction_name.confident ? extracted.direction_name.value : null),
+    counterparty_name: txn.counterparty_name ?? (extracted.counterparty_name.confident ? extracted.counterparty_name.value : null),
     description: extracted.description,
     account_info: txn.account_info,
     account_id: txn.account_id,
@@ -388,14 +391,16 @@ async function handleManualEntry(
 
   let data: Record<string, unknown> = {
     manager_id: managerId,
-    amount: preParsedAmount ?? extracted.amount,
-    date: extracted.date ? parseDate(extracted.date) ?? extracted.date : null,
-    account_info: extracted.account_name,
-    category_id: extracted.category_id,
-    category_name: extracted.category_name,
-    direction_id: extracted.direction_id,
-    direction_name: extracted.direction_name,
-    counterparty_name: extracted.counterparty_name,
+    amount: preParsedAmount ?? (extracted.amount.confident ? extracted.amount.value : null),
+    date: extracted.date.confident && extracted.date.value
+      ? parseDate(extracted.date.value) ?? extracted.date.value
+      : null,
+    account_info: extracted.account_name.confident ? extracted.account_name.value : null,
+    category_id: extracted.category_id.confident ? extracted.category_id.value : null,
+    category_name: extracted.category_name.confident ? extracted.category_name.value : null,
+    direction_id: extracted.direction_id.confident ? extracted.direction_id.value : null,
+    direction_name: extracted.direction_name.confident ? extracted.direction_name.value : null,
+    counterparty_name: extracted.counterparty_name.confident ? extracted.counterparty_name.value : null,
     description: extracted.description,
   }
 
