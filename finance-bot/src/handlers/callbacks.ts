@@ -33,6 +33,10 @@ export async function callbackHandler(ctx: Context): Promise<void> {
     await handleConfirmTransaction(ctx, data)
   } else if (data.startsWith('cancel_txn:')) {
     await handleCancelTransaction(ctx, data)
+  } else if (data.startsWith('income_refund:')) {
+    await handleIncomeRefund(ctx, data)
+  } else if (data.startsWith('income_skip:')) {
+    await handleIncomeSkip(ctx, data)
   }
 }
 
@@ -79,16 +83,24 @@ async function handleConfirmTransaction(ctx: Context, data: string): Promise<voi
       partnerId = await findOrCreatePartner(txn.counterparty_name)
     }
 
-    const fintabloId = await postTransaction({
+    const group = (txn.txn_group as 'outcome' | 'income' | 'transfer') ?? 'outcome'
+
+    const payload: Parameters<typeof postTransaction>[0] = {
       date: txn.date!,
       value: Math.abs(txn.amount!),
-      group: 'outcome',
+      group,
       moneybagId: txn.account_id!,
       categoryId: txn.category_id ?? undefined,
       directionId: txn.direction_id ?? undefined,
       partnerId,
       description: txn.description ?? undefined,
-    })
+    }
+
+    if (group === 'transfer' && txn.account2_id) {
+      payload.moneybag2Id = txn.account2_id
+    }
+
+    const fintabloId = await postTransaction(payload)
 
     updatePendingTransaction(txnId, { status: 'sent', fintablo_txn_id: fintabloId })
     await ctx.editMessageText(
@@ -127,5 +139,43 @@ async function handleCancelTransaction(ctx: Context, data: string): Promise<void
       await processNextInQueue(ctx.api, parseInt(manager.telegram_id, 10))
     }
   }
+}
+
+async function handleIncomeRefund(ctx: Context, data: string): Promise<void> {
+  const txnId = parseInt(data.split(':')[1], 10)
+  const txn = getPendingTransaction(txnId)
+  if (!txn) return
+
+  updatePendingTransaction(txnId, { status: 'confirmed' })
+
+  try {
+    const fintabloId = await postTransaction({
+      date: txn.date!,
+      value: Math.abs(txn.amount!),
+      group: 'income',
+      moneybagId: txn.account_id!,
+      description: txn.description ?? undefined,
+    })
+
+    updatePendingTransaction(txnId, { status: 'sent', fintablo_txn_id: fintabloId })
+    await ctx.editMessageText(
+      `Возврат отправлен в ФинТабло\n${txn.date} | ${txn.amount}₽ | ${txn.account_info ?? '?'} | ${txn.description ?? ''}`
+    )
+  } catch (err) {
+    logger.error({ err, txnId }, 'Failed to send income to FinTablo')
+    updatePendingTransaction(txnId, { status: 'failed' })
+    await ctx.editMessageText(`Ошибка отправки возврата в ФинТабло\n${txn.date} | ${txn.amount}₽`)
+  }
+}
+
+async function handleIncomeSkip(ctx: Context, data: string): Promise<void> {
+  const txnId = parseInt(data.split(':')[1], 10)
+  const txn = getPendingTransaction(txnId)
+  if (!txn) return
+
+  updatePendingTransaction(txnId, { status: 'skipped' })
+  await ctx.editMessageText(
+    `Пропущено (вывод прибыли)\n${txn.date} | ${txn.amount}₽ | ${txn.account_info ?? '?'}`
+  )
 }
 

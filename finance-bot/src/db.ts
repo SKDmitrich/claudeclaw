@@ -50,7 +50,10 @@ export interface PendingTransaction {
   date: string | null
   account_info: string | null
   account_id: number | null
-  status: 'pending' | 'enriched' | 'confirmed' | 'sent' | 'failed'
+  txn_group: 'outcome' | 'income' | 'transfer' | null
+  account2_id: number | null
+  account2_info: string | null
+  status: 'pending' | 'enriched' | 'confirmed' | 'sent' | 'failed' | 'skipped'
   category_id: number | null
   category_name: string | null
   direction_id: number | null
@@ -109,7 +112,10 @@ export function initDatabase(): void {
       date TEXT,
       account_info TEXT,
       account_id INTEGER,
-      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','enriched','confirmed','sent','failed')),
+      txn_group TEXT DEFAULT 'outcome',
+      account2_id INTEGER,
+      account2_info TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','enriched','confirmed','sent','failed','skipped')),
       category_id INTEGER,
       category_name TEXT,
       direction_id INTEGER,
@@ -123,6 +129,11 @@ export function initDatabase(): void {
       updated_at INTEGER NOT NULL
     )
   `)
+
+  // Migrations
+  try { d.exec('ALTER TABLE pending_transactions ADD COLUMN txn_group TEXT DEFAULT \'outcome\'') } catch { /* already exists */ }
+  try { d.exec('ALTER TABLE pending_transactions ADD COLUMN account2_id INTEGER') } catch { /* already exists */ }
+  try { d.exec('ALTER TABLE pending_transactions ADD COLUMN account2_info TEXT') } catch { /* already exists */ }
 
   d.exec(`
     CREATE TABLE IF NOT EXISTS sync_state (
@@ -263,6 +274,9 @@ export function createPendingTransaction(data: {
   date?: string | null
   account_info?: string | null
   account_id?: number | null
+  txn_group?: 'outcome' | 'income' | 'transfer' | null
+  account2_id?: number | null
+  account2_info?: string | null
   category_id?: number | null
   category_name?: string | null
   direction_id?: number | null
@@ -275,10 +289,11 @@ export function createPendingTransaction(data: {
   const result = getDb()
     .prepare(`
       INSERT INTO pending_transactions
-        (zenmoney_txn_id, manager_id, amount, date, account_info, account_id, status,
+        (zenmoney_txn_id, manager_id, amount, date, account_info, account_id,
+         txn_group, account2_id, account2_info, status,
          category_id, category_name, direction_id, direction_name,
          counterparty_id, counterparty_name, description, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .run(
       data.zenmoney_txn_id ?? null,
@@ -287,6 +302,9 @@ export function createPendingTransaction(data: {
       data.date ?? null,
       data.account_info ?? null,
       data.account_id ?? null,
+      data.txn_group ?? 'outcome',
+      data.account2_id ?? null,
+      data.account2_info ?? null,
       data.category_id ?? null,
       data.category_name ?? null,
       data.direction_id ?? null,
@@ -314,6 +332,7 @@ export function getPendingTransactionByZenmoneyId(txnId: string): PendingTransac
 export function updatePendingTransaction(id: number, fields: Partial<PendingTransaction>): void {
   const allowed = [
     'status', 'amount', 'date', 'account_info', 'account_id',
+    'txn_group', 'account2_id', 'account2_info',
     'category_id', 'category_name', 'direction_id', 'direction_name',
     'counterparty_id', 'counterparty_name', 'description',
     'fintablo_txn_id', 'bot_message_id', 'manager_id',

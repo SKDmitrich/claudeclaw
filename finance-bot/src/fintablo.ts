@@ -6,6 +6,7 @@ export interface FinTabloTransactionPayload {
   value: number       // positive number
   group: 'outcome' | 'income' | 'transfer'
   moneybagId: number  // account ID in FinTablo
+  moneybag2Id?: number // second account for transfers
   categoryId?: number
   directionId?: number
   partnerId?: number
