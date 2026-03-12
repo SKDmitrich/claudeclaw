@@ -1,0 +1,313 @@
+{
+    "updatedAt": "2026-03-12T03:22:57.533Z",
+    "createdAt": "2026-03-12T03:22:57.533Z",
+    "id": "A69WxsC4Ed3heyvV",
+    "name": "WF-07: Draft Transaction Manager",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "07-trigger",
+            "name": "Execute Workflow Trigger",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const input = $input.first().json;\nconst action = input.action;\nconst now = new Date().toISOString();\n\nif (action === 'create') {\n  const crypto = require('crypto');\n  const draftId = 'draft_' + crypto.randomUUID().slice(0,8);\n  const dedupHash = crypto.createHash('sha256').update(\n    (input.date||'') + '|' + (input.amount||'') + '|' + (input.account_id||'') + '|' + (input.counterparty_id||'')\n  ).digest('hex').slice(0,16);\n  \n  return [{ json: {\n    action: 'create',\n    draft_id: draftId,\n    user_id: input.user_id || '',\n    date: input.date || '',\n    amount: input.amount || '',\n    currency: input.currency || 'RUB',\n    account_id: input.account_id || '',\n    counterparty_id: input.counterparty_id || '',\n    category_id: input.category_id || '',\n    description: input.description || '',\n    source: input.source || 'telegram_text',\n    dedup_hash: dedupHash,\n    status: 'draft',\n    created_at: now,\n    updated_at: now\n  }}];\n}\n\nreturn [{ json: input }];"
+            },
+            "id": "07-code",
+            "name": "Process Draft",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                470,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "create",
+                            "leftValue": "={{ $json.action }}",
+                            "rightValue": "create",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ]
+                }
+            },
+            "id": "07-if",
+            "name": "Is Create?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                690,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "append",
+                "documentId": {
+                    "__rl": true,
+                    "value": "1F0Ub4hPwoFNQQBVpIxx0IYKiZq8ihetuKeKHBB516ng",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "gid=1375548730",
+                    "mode": "id"
+                },
+                "columns": {
+                    "mappingMode": "autoMapInputData",
+                    "matchingColumns": []
+                },
+                "options": {}
+            },
+            "id": "07-write",
+            "name": "Write Draft",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                910,
+                200
+            ],
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "R9k8DzUEcW6HjwIn",
+                    "name": "Google Sheets account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Execute Workflow Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Process Draft",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Process Draft": {
+            "main": [
+                [
+                    {
+                        "node": "Is Create?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is Create?": {
+            "main": [
+                [
+                    {
+                        "node": "Write Draft",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "4436acd5-d5ab-4f15-8a5f-8b8fff905a72",
+    "activeVersionId": "4436acd5-d5ab-4f15-8a5f-8b8fff905a72",
+    "versionCounter": 11,
+    "triggerCount": 0,
+    "shared": [
+        {
+            "updatedAt": "2026-03-12T03:22:57.533Z",
+            "createdAt": "2026-03-12T03:22:57.533Z",
+            "role": "workflow:owner",
+            "workflowId": "A69WxsC4Ed3heyvV",
+            "projectId": "pxhtEMeW80Eo5SKP",
+            "project": {
+                "updatedAt": "2026-03-10T17:12:13.408Z",
+                "createdAt": "2026-03-09T07:53:55.057Z",
+                "id": "pxhtEMeW80Eo5SKP",
+                "name": "Sergei Kuznetsov <kuznetsovsd89@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "60dd4e61-df83-4185-9492-a10f6ff68e03"
+            }
+        }
+    ],
+    "tags": [],
+    "activeVersion": {
+        "updatedAt": "2026-03-12T03:22:57.539Z",
+        "createdAt": "2026-03-12T03:22:57.539Z",
+        "versionId": "4436acd5-d5ab-4f15-8a5f-8b8fff905a72",
+        "workflowId": "A69WxsC4Ed3heyvV",
+        "nodes": [
+            {
+                "parameters": {},
+                "id": "07-trigger",
+                "name": "Execute Workflow Trigger",
+                "type": "n8n-nodes-base.executeWorkflowTrigger",
+                "typeVersion": 1,
+                "position": [
+                    250,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "jsCode": "const input = $input.first().json;\nconst action = input.action;\nconst now = new Date().toISOString();\n\nif (action === 'create') {\n  const crypto = require('crypto');\n  const draftId = 'draft_' + crypto.randomUUID().slice(0,8);\n  const dedupHash = crypto.createHash('sha256').update(\n    (input.date||'') + '|' + (input.amount||'') + '|' + (input.account_id||'') + '|' + (input.counterparty_id||'')\n  ).digest('hex').slice(0,16);\n  \n  return [{ json: {\n    action: 'create',\n    draft_id: draftId,\n    user_id: input.user_id || '',\n    date: input.date || '',\n    amount: input.amount || '',\n    currency: input.currency || 'RUB',\n    account_id: input.account_id || '',\n    counterparty_id: input.counterparty_id || '',\n    category_id: input.category_id || '',\n    description: input.description || '',\n    source: input.source || 'telegram_text',\n    dedup_hash: dedupHash,\n    status: 'draft',\n    created_at: now,\n    updated_at: now\n  }}];\n}\n\nreturn [{ json: input }];"
+                },
+                "id": "07-code",
+                "name": "Process Draft",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    470,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict"
+                        },
+                        "conditions": [
+                            {
+                                "id": "create",
+                                "leftValue": "={{ $json.action }}",
+                                "rightValue": "create",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "equals"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "id": "07-if",
+                "name": "Is Create?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    690,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "operation": "append",
+                    "documentId": {
+                        "__rl": true,
+                        "value": "1F0Ub4hPwoFNQQBVpIxx0IYKiZq8ihetuKeKHBB516ng",
+                        "mode": "id"
+                    },
+                    "sheetName": {
+                        "__rl": true,
+                        "value": "gid=1375548730",
+                        "mode": "id"
+                    },
+                    "columns": {
+                        "mappingMode": "autoMapInputData",
+                        "matchingColumns": []
+                    },
+                    "options": {}
+                },
+                "id": "07-write",
+                "name": "Write Draft",
+                "type": "n8n-nodes-base.googleSheets",
+                "typeVersion": 4.5,
+                "position": [
+                    910,
+                    200
+                ],
+                "credentials": {
+                    "googleSheetsOAuth2Api": {
+                        "id": "R9k8DzUEcW6HjwIn",
+                        "name": "Google Sheets account"
+                    }
+                }
+            }
+        ],
+        "connections": {
+            "Execute Workflow Trigger": {
+                "main": [
+                    [
+                        {
+                            "node": "Process Draft",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Process Draft": {
+                "main": [
+                    [
+                        {
+                            "node": "Is Create?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Is Create?": {
+                "main": [
+                    [
+                        {
+                            "node": "Write Draft",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    []
+                ]
+            }
+        },
+        "authors": "Sergei Kuznetsov",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-03-12T03:22:58.091Z",
+                "id": 19,
+                "workflowId": "A69WxsC4Ed3heyvV",
+                "versionId": "4436acd5-d5ab-4f15-8a5f-8b8fff905a72",
+                "event": "activated",
+                "userId": "60dd4e61-df83-4185-9492-a10f6ff68e03"
+            }
+        ]
+    }
+}

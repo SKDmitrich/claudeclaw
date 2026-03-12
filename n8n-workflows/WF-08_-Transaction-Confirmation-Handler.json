@@ -1,0 +1,209 @@
+{
+    "updatedAt": "2026-03-12T03:01:00.630Z",
+    "createdAt": "2026-03-12T03:01:00.630Z",
+    "id": "htZGAg1uYvVa2cn3",
+    "name": "WF-08: Transaction Confirmation Handler",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "08-trigger",
+            "name": "Execute Workflow Trigger",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const d = $input.first().json;\nconst text = `\ud83d\udccb \u041d\u043e\u0432\u0430\u044f \u043e\u043f\u0435\u0440\u0430\u0446\u0438\u044f:\\n\\n\ud83d\udcc5 \u0414\u0430\u0442\u0430: ${d.date || '\u2014'}\\n\ud83d\udcb0 \u0421\u0443\u043c\u043c\u0430: ${d.amount || '\u2014'} ${d.currency || 'RUB'}\\n\ud83c\udfe6 \u0421\u0447\u0451\u0442: ${d.account_name || d.account_id || '\u2014'}\\n\ud83d\udc64 \u041a\u043e\u043d\u0442\u0440\u0430\u0433\u0435\u043d\u0442: ${d.counterparty_name || d.counterparty_id || '\u2014'}\\n\ud83d\udcc1 \u0421\u0442\u0430\u0442\u044c\u044f: ${d.category_name || d.category_id || '\u2014'}\\n\ud83d\udcdd \u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435: ${d.description || '\u2014'}\\n\\n\u0412\u0441\u0451 \u0432\u0435\u0440\u043d\u043e?`;\n\nconst draftId = d.draft_id || '';\nconst keyboard = JSON.stringify({\n  inline_keyboard: [\n    [\n      {text: '\u2705 \u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c', callback_data: 'confirm:' + draftId},\n      {text: '\u274c \u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c', callback_data: 'cancel:' + draftId}\n    ],\n    [\n      {text: '\u270f\ufe0f \u0418\u0437\u043c\u0435\u043d\u0438\u0442\u044c', callback_data: 'edit:' + draftId}\n    ]\n  ]\n});\n\nreturn [{ json: { chat_id: d.chat_id, text, reply_markup: keyboard, draft_id: draftId } }];"
+            },
+            "id": "08-format",
+            "name": "Format Confirmation",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                470,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $json.chat_id }}",
+                "text": "={{ $json.text }}",
+                "additionalFields": {
+                    "replyMarkup": "inlineKeyboard",
+                    "inlineKeyboard": "={{ $json.reply_markup }}"
+                }
+            },
+            "id": "08-send",
+            "name": "Send Confirmation",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                690,
+                300
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "BUi8I5qusGpd92vZ",
+                    "name": "Sofiny-Finance"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Execute Workflow Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Format Confirmation",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format Confirmation": {
+            "main": [
+                [
+                    {
+                        "node": "Send Confirmation",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "d8e2f17a-6326-4f74-9290-8b23af96e19a",
+    "activeVersionId": "d8e2f17a-6326-4f74-9290-8b23af96e19a",
+    "versionCounter": 11,
+    "triggerCount": 0,
+    "shared": [
+        {
+            "updatedAt": "2026-03-12T03:01:00.630Z",
+            "createdAt": "2026-03-12T03:01:00.630Z",
+            "role": "workflow:owner",
+            "workflowId": "htZGAg1uYvVa2cn3",
+            "projectId": "pxhtEMeW80Eo5SKP",
+            "project": {
+                "updatedAt": "2026-03-10T17:12:13.408Z",
+                "createdAt": "2026-03-09T07:53:55.057Z",
+                "id": "pxhtEMeW80Eo5SKP",
+                "name": "Sergei Kuznetsov <kuznetsovsd89@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "60dd4e61-df83-4185-9492-a10f6ff68e03"
+            }
+        }
+    ],
+    "tags": [],
+    "activeVersion": {
+        "updatedAt": "2026-03-12T03:01:00.640Z",
+        "createdAt": "2026-03-12T03:01:00.640Z",
+        "versionId": "d8e2f17a-6326-4f74-9290-8b23af96e19a",
+        "workflowId": "htZGAg1uYvVa2cn3",
+        "nodes": [
+            {
+                "parameters": {},
+                "id": "08-trigger",
+                "name": "Execute Workflow Trigger",
+                "type": "n8n-nodes-base.executeWorkflowTrigger",
+                "typeVersion": 1,
+                "position": [
+                    250,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "jsCode": "const d = $input.first().json;\nconst text = `\ud83d\udccb \u041d\u043e\u0432\u0430\u044f \u043e\u043f\u0435\u0440\u0430\u0446\u0438\u044f:\\n\\n\ud83d\udcc5 \u0414\u0430\u0442\u0430: ${d.date || '\u2014'}\\n\ud83d\udcb0 \u0421\u0443\u043c\u043c\u0430: ${d.amount || '\u2014'} ${d.currency || 'RUB'}\\n\ud83c\udfe6 \u0421\u0447\u0451\u0442: ${d.account_name || d.account_id || '\u2014'}\\n\ud83d\udc64 \u041a\u043e\u043d\u0442\u0440\u0430\u0433\u0435\u043d\u0442: ${d.counterparty_name || d.counterparty_id || '\u2014'}\\n\ud83d\udcc1 \u0421\u0442\u0430\u0442\u044c\u044f: ${d.category_name || d.category_id || '\u2014'}\\n\ud83d\udcdd \u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435: ${d.description || '\u2014'}\\n\\n\u0412\u0441\u0451 \u0432\u0435\u0440\u043d\u043e?`;\n\nconst draftId = d.draft_id || '';\nconst keyboard = JSON.stringify({\n  inline_keyboard: [\n    [\n      {text: '\u2705 \u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c', callback_data: 'confirm:' + draftId},\n      {text: '\u274c \u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c', callback_data: 'cancel:' + draftId}\n    ],\n    [\n      {text: '\u270f\ufe0f \u0418\u0437\u043c\u0435\u043d\u0438\u0442\u044c', callback_data: 'edit:' + draftId}\n    ]\n  ]\n});\n\nreturn [{ json: { chat_id: d.chat_id, text, reply_markup: keyboard, draft_id: draftId } }];"
+                },
+                "id": "08-format",
+                "name": "Format Confirmation",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    470,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "chatId": "={{ $json.chat_id }}",
+                    "text": "={{ $json.text }}",
+                    "additionalFields": {
+                        "replyMarkup": "inlineKeyboard",
+                        "inlineKeyboard": "={{ $json.reply_markup }}"
+                    }
+                },
+                "id": "08-send",
+                "name": "Send Confirmation",
+                "type": "n8n-nodes-base.telegram",
+                "typeVersion": 1.2,
+                "position": [
+                    690,
+                    300
+                ],
+                "credentials": {
+                    "telegramApi": {
+                        "id": "BUi8I5qusGpd92vZ",
+                        "name": "Sofiny-Finance"
+                    }
+                }
+            }
+        ],
+        "connections": {
+            "Execute Workflow Trigger": {
+                "main": [
+                    [
+                        {
+                            "node": "Format Confirmation",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Format Confirmation": {
+                "main": [
+                    [
+                        {
+                            "node": "Send Confirmation",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Sergei Kuznetsov",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-03-12T03:02:35.485Z",
+                "id": 9,
+                "workflowId": "htZGAg1uYvVa2cn3",
+                "versionId": "d8e2f17a-6326-4f74-9290-8b23af96e19a",
+                "event": "activated",
+                "userId": "60dd4e61-df83-4185-9492-a10f6ff68e03"
+            }
+        ]
+    }
+}

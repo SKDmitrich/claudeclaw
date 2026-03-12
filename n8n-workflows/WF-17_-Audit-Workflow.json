@@ -1,0 +1,229 @@
+{
+    "updatedAt": "2026-03-12T03:22:57.338Z",
+    "createdAt": "2026-03-12T03:22:57.338Z",
+    "id": "vNEcPCZZfpoqtE11",
+    "name": "WF-17: Audit Workflow",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "17-trigger",
+            "name": "Execute Workflow Trigger",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const now = new Date().toISOString();\nconst input = $input.first().json;\nreturn [{\n  json: {\n    timestamp: now,\n    user_id: input.user_id || '',\n    action: input.action || '',\n    entity: input.entity || '',\n    entity_id: input.entity_id || '',\n    details: typeof input.details === 'object' ? JSON.stringify(input.details) : (input.details || ''),\n    ip: ''\n  }\n}];"
+            },
+            "id": "17-code",
+            "name": "Format Audit Entry",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                470,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "append",
+                "documentId": {
+                    "__rl": true,
+                    "value": "1F0Ub4hPwoFNQQBVpIxx0IYKiZq8ihetuKeKHBB516ng",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "gid=992829649",
+                    "mode": "id"
+                },
+                "columns": {
+                    "mappingMode": "autoMapInputData",
+                    "matchingColumns": []
+                },
+                "options": {}
+            },
+            "id": "17-sheets",
+            "name": "Write to AUDIT_LOG",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                690,
+                300
+            ],
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "R9k8DzUEcW6HjwIn",
+                    "name": "Google Sheets account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Execute Workflow Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Format Audit Entry",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format Audit Entry": {
+            "main": [
+                [
+                    {
+                        "node": "Write to AUDIT_LOG",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "7eb34551-c495-41d5-873e-fd0b8ed940e2",
+    "activeVersionId": "7eb34551-c495-41d5-873e-fd0b8ed940e2",
+    "versionCounter": 11,
+    "triggerCount": 0,
+    "shared": [
+        {
+            "updatedAt": "2026-03-12T03:22:57.338Z",
+            "createdAt": "2026-03-12T03:22:57.338Z",
+            "role": "workflow:owner",
+            "workflowId": "vNEcPCZZfpoqtE11",
+            "projectId": "pxhtEMeW80Eo5SKP",
+            "project": {
+                "updatedAt": "2026-03-10T17:12:13.408Z",
+                "createdAt": "2026-03-09T07:53:55.057Z",
+                "id": "pxhtEMeW80Eo5SKP",
+                "name": "Sergei Kuznetsov <kuznetsovsd89@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "60dd4e61-df83-4185-9492-a10f6ff68e03"
+            }
+        }
+    ],
+    "tags": [],
+    "activeVersion": {
+        "updatedAt": "2026-03-12T03:22:57.351Z",
+        "createdAt": "2026-03-12T03:22:57.351Z",
+        "versionId": "7eb34551-c495-41d5-873e-fd0b8ed940e2",
+        "workflowId": "vNEcPCZZfpoqtE11",
+        "nodes": [
+            {
+                "parameters": {},
+                "id": "17-trigger",
+                "name": "Execute Workflow Trigger",
+                "type": "n8n-nodes-base.executeWorkflowTrigger",
+                "typeVersion": 1,
+                "position": [
+                    250,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "jsCode": "const now = new Date().toISOString();\nconst input = $input.first().json;\nreturn [{\n  json: {\n    timestamp: now,\n    user_id: input.user_id || '',\n    action: input.action || '',\n    entity: input.entity || '',\n    entity_id: input.entity_id || '',\n    details: typeof input.details === 'object' ? JSON.stringify(input.details) : (input.details || ''),\n    ip: ''\n  }\n}];"
+                },
+                "id": "17-code",
+                "name": "Format Audit Entry",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    470,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "operation": "append",
+                    "documentId": {
+                        "__rl": true,
+                        "value": "1F0Ub4hPwoFNQQBVpIxx0IYKiZq8ihetuKeKHBB516ng",
+                        "mode": "id"
+                    },
+                    "sheetName": {
+                        "__rl": true,
+                        "value": "gid=992829649",
+                        "mode": "id"
+                    },
+                    "columns": {
+                        "mappingMode": "autoMapInputData",
+                        "matchingColumns": []
+                    },
+                    "options": {}
+                },
+                "id": "17-sheets",
+                "name": "Write to AUDIT_LOG",
+                "type": "n8n-nodes-base.googleSheets",
+                "typeVersion": 4.5,
+                "position": [
+                    690,
+                    300
+                ],
+                "credentials": {
+                    "googleSheetsOAuth2Api": {
+                        "id": "R9k8DzUEcW6HjwIn",
+                        "name": "Google Sheets account"
+                    }
+                }
+            }
+        ],
+        "connections": {
+            "Execute Workflow Trigger": {
+                "main": [
+                    [
+                        {
+                            "node": "Format Audit Entry",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Format Audit Entry": {
+                "main": [
+                    [
+                        {
+                            "node": "Write to AUDIT_LOG",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Sergei Kuznetsov",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-03-12T03:22:57.908Z",
+                "id": 18,
+                "workflowId": "vNEcPCZZfpoqtE11",
+                "versionId": "7eb34551-c495-41d5-873e-fd0b8ed940e2",
+                "event": "activated",
+                "userId": "60dd4e61-df83-4185-9492-a10f6ff68e03"
+            }
+        ]
+    }
+}

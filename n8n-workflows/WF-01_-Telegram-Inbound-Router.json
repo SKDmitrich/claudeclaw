@@ -1,0 +1,707 @@
+{
+    "updatedAt": "2026-03-12T06:48:04.520Z",
+    "createdAt": "2026-03-12T06:47:55.353Z",
+    "id": "376wj0MlTIQTqFaD",
+    "name": "WF-01: Telegram Inbound Router",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {
+                "updates": [
+                    "message",
+                    "callback_query"
+                ]
+            },
+            "id": "01-trigger",
+            "name": "TelegramTrigger",
+            "type": "n8n-nodes-base.telegramTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                200,
+                300
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "BUi8I5qusGpd92vZ",
+                    "name": "Sofiny-Finance"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "const input = $input.first().json;\nlet messageType = 'unknown';\nlet chatId = '';\nlet text = '';\nlet callbackData = '';\nlet messageId = '';\nlet firstName = '';\n\nif (input.message) {\n  chatId = String(input.message.chat.id);\n  text = input.message.text || '';\n  messageId = String(input.message.message_id);\n  firstName = input.message.from?.first_name || '';\n  messageType = 'text';\n} else if (input.callback_query) {\n  chatId = String(input.callback_query.message.chat.id);\n  callbackData = input.callback_query.data || '';\n  messageId = String(input.callback_query.message.message_id);\n  firstName = input.callback_query.from?.first_name || '';\n  messageType = 'callback';\n}\n\nreturn [{\n  json: {\n    messageType,\n    chatId,\n    text,\n    callbackData,\n    messageId,\n    firstName,\n    rawUpdate: input\n  }\n}];"
+            },
+            "id": "01-parse",
+            "name": "ParseUpdate",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                420,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "KKBxr8wB5INW2Wwp",
+                "options": {}
+            },
+            "id": "01-rbac",
+            "name": "RBACCheck",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1.2,
+            "position": [
+                640,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const rbac = $input.first().json;\nif (!rbac.authorized) {\n  return [{ json: { ...rbac, route: 'unauthorized' } }];\n}\nconst msgType = rbac.messageType;\nconst text = (rbac.text || '').toLowerCase().trim();\nconst cb = rbac.callbackData || '';\nlet route = 'text';\nif (msgType === 'callback') {\n  const action = cb.split(':')[0];\n  if (['confirm','reject','edit'].includes(action)) route = 'confirm';\n} else if (text === '/start' || text === '/help') {\n  route = 'help';\n}\nreturn [{ json: { ...rbac, route } }];"
+            },
+            "id": "01-route",
+            "name": "DetermineRoute",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                860,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "c1",
+                            "leftValue": "={{ $json.route }}",
+                            "rightValue": "text",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                }
+            },
+            "id": "01-if-text",
+            "name": "IsText",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                1080,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "c2",
+                            "leftValue": "={{ $json.route }}",
+                            "rightValue": "confirm",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                }
+            },
+            "id": "01-if-confirm",
+            "name": "IsConfirm",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                1300,
+                500
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "c3",
+                            "leftValue": "={{ $json.route }}",
+                            "rightValue": "help",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                }
+            },
+            "id": "01-if-help",
+            "name": "IsHelp",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                1520,
+                700
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "SzW5d43L9O0Dwk1e",
+                "options": {}
+            },
+            "id": "01-wf03",
+            "name": "WF03-TextProcessing",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1.2,
+            "position": [
+                1300,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "htZGAg1uYvVa2cn3",
+                "options": {}
+            },
+            "id": "01-wf08",
+            "name": "WF08-Confirmation",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1.2,
+            "position": [
+                1520,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $json.chatId }}",
+                "text": "\ud83d\udc4b \u041f\u0440\u0438\u0432\u0435\u0442, {{ $json.firstName }}!\n\n\u042f \u0444\u0438\u043d\u0430\u043d\u0441\u043e\u0432\u044b\u0439 \u0431\u043e\u0442 Sofiny.\n\n\u041e\u0442\u043f\u0440\u0430\u0432\u044c \u0444\u0438\u043d\u0430\u043d\u0441\u043e\u0432\u0443\u044e \u043e\u043f\u0435\u0440\u0430\u0446\u0438\u044e \u0442\u0435\u043a\u0441\u0442\u043e\u043c, \u043d\u0430\u043f\u0440\u0438\u043c\u0435\u0440:\n\u00ab\u041e\u043f\u043b\u0430\u0442\u0430 \u0437\u0430 \u0442\u043a\u0430\u043d\u044c 150000 \u0441\u043e \u0441\u0447\u0435\u0442\u0430 Sofiny \u0420\u0421\u00bb\n\n\u042f \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u044e \u0438 \u043f\u043e\u043f\u0440\u043e\u0448\u0443 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c.",
+                "additionalFields": {}
+            },
+            "id": "01-help",
+            "name": "SendHelp",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                1740,
+                500
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "BUi8I5qusGpd92vZ",
+                    "name": "Sofiny-Finance"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $json.chatId }}",
+                "text": "\u26d4 \u0414\u043e\u0441\u0442\u0443\u043f \u0437\u0430\u043f\u0440\u0435\u0449\u0435\u043d. \u041e\u0431\u0440\u0430\u0442\u0438\u0442\u0435\u0441\u044c \u043a \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0443.",
+                "additionalFields": {}
+            },
+            "id": "01-unauth",
+            "name": "SendUnauthorized",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                1740,
+                900
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "BUi8I5qusGpd92vZ",
+                    "name": "Sofiny-Finance"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "TelegramTrigger": {
+            "main": [
+                [
+                    {
+                        "node": "ParseUpdate",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "ParseUpdate": {
+            "main": [
+                [
+                    {
+                        "node": "RBACCheck",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "RBACCheck": {
+            "main": [
+                [
+                    {
+                        "node": "DetermineRoute",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "DetermineRoute": {
+            "main": [
+                [
+                    {
+                        "node": "IsText",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IsText": {
+            "main": [
+                [
+                    {
+                        "node": "WF03-TextProcessing",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "IsConfirm",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IsConfirm": {
+            "main": [
+                [
+                    {
+                        "node": "WF08-Confirmation",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "IsHelp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IsHelp": {
+            "main": [
+                [
+                    {
+                        "node": "SendHelp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "SendUnauthorized",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "errorWorkflow": "bwBm5ClR6XWTdfZu",
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "d77d1429-e61b-4cf5-8d87-020be7aabf38",
+    "activeVersionId": "d77d1429-e61b-4cf5-8d87-020be7aabf38",
+    "versionCounter": 3,
+    "triggerCount": 1,
+    "shared": [
+        {
+            "updatedAt": "2026-03-12T06:47:55.353Z",
+            "createdAt": "2026-03-12T06:47:55.353Z",
+            "role": "workflow:owner",
+            "workflowId": "376wj0MlTIQTqFaD",
+            "projectId": "pxhtEMeW80Eo5SKP",
+            "project": {
+                "updatedAt": "2026-03-10T17:12:13.408Z",
+                "createdAt": "2026-03-09T07:53:55.057Z",
+                "id": "pxhtEMeW80Eo5SKP",
+                "name": "Sergei Kuznetsov <kuznetsovsd89@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "60dd4e61-df83-4185-9492-a10f6ff68e03"
+            }
+        }
+    ],
+    "tags": [],
+    "activeVersion": {
+        "updatedAt": "2026-03-12T06:47:55.370Z",
+        "createdAt": "2026-03-12T06:47:55.370Z",
+        "versionId": "d77d1429-e61b-4cf5-8d87-020be7aabf38",
+        "workflowId": "376wj0MlTIQTqFaD",
+        "nodes": [
+            {
+                "parameters": {
+                    "updates": [
+                        "message",
+                        "callback_query"
+                    ]
+                },
+                "id": "01-trigger",
+                "name": "TelegramTrigger",
+                "type": "n8n-nodes-base.telegramTrigger",
+                "typeVersion": 1.1,
+                "position": [
+                    200,
+                    300
+                ],
+                "credentials": {
+                    "telegramApi": {
+                        "id": "BUi8I5qusGpd92vZ",
+                        "name": "Sofiny-Finance"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "jsCode": "const input = $input.first().json;\nlet messageType = 'unknown';\nlet chatId = '';\nlet text = '';\nlet callbackData = '';\nlet messageId = '';\nlet firstName = '';\n\nif (input.message) {\n  chatId = String(input.message.chat.id);\n  text = input.message.text || '';\n  messageId = String(input.message.message_id);\n  firstName = input.message.from?.first_name || '';\n  messageType = 'text';\n} else if (input.callback_query) {\n  chatId = String(input.callback_query.message.chat.id);\n  callbackData = input.callback_query.data || '';\n  messageId = String(input.callback_query.message.message_id);\n  firstName = input.callback_query.from?.first_name || '';\n  messageType = 'callback';\n}\n\nreturn [{\n  json: {\n    messageType,\n    chatId,\n    text,\n    callbackData,\n    messageId,\n    firstName,\n    rawUpdate: input\n  }\n}];"
+                },
+                "id": "01-parse",
+                "name": "ParseUpdate",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    420,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "workflowId": "KKBxr8wB5INW2Wwp",
+                    "options": {}
+                },
+                "id": "01-rbac",
+                "name": "RBACCheck",
+                "type": "n8n-nodes-base.executeWorkflow",
+                "typeVersion": 1.2,
+                "position": [
+                    640,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "jsCode": "const rbac = $input.first().json;\nif (!rbac.authorized) {\n  return [{ json: { ...rbac, route: 'unauthorized' } }];\n}\nconst msgType = rbac.messageType;\nconst text = (rbac.text || '').toLowerCase().trim();\nconst cb = rbac.callbackData || '';\nlet route = 'text';\nif (msgType === 'callback') {\n  const action = cb.split(':')[0];\n  if (['confirm','reject','edit'].includes(action)) route = 'confirm';\n} else if (text === '/start' || text === '/help') {\n  route = 'help';\n}\nreturn [{ json: { ...rbac, route } }];"
+                },
+                "id": "01-route",
+                "name": "DetermineRoute",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    860,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict"
+                        },
+                        "conditions": [
+                            {
+                                "id": "c1",
+                                "leftValue": "={{ $json.route }}",
+                                "rightValue": "text",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "equals"
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    }
+                },
+                "id": "01-if-text",
+                "name": "IsText",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2.2,
+                "position": [
+                    1080,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict"
+                        },
+                        "conditions": [
+                            {
+                                "id": "c2",
+                                "leftValue": "={{ $json.route }}",
+                                "rightValue": "confirm",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "equals"
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    }
+                },
+                "id": "01-if-confirm",
+                "name": "IsConfirm",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2.2,
+                "position": [
+                    1300,
+                    500
+                ]
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict"
+                        },
+                        "conditions": [
+                            {
+                                "id": "c3",
+                                "leftValue": "={{ $json.route }}",
+                                "rightValue": "help",
+                                "operator": {
+                                    "type": "string",
+                                    "operation": "equals"
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    }
+                },
+                "id": "01-if-help",
+                "name": "IsHelp",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2.2,
+                "position": [
+                    1520,
+                    700
+                ]
+            },
+            {
+                "parameters": {
+                    "workflowId": "SzW5d43L9O0Dwk1e",
+                    "options": {}
+                },
+                "id": "01-wf03",
+                "name": "WF03-TextProcessing",
+                "type": "n8n-nodes-base.executeWorkflow",
+                "typeVersion": 1.2,
+                "position": [
+                    1300,
+                    100
+                ]
+            },
+            {
+                "parameters": {
+                    "workflowId": "htZGAg1uYvVa2cn3",
+                    "options": {}
+                },
+                "id": "01-wf08",
+                "name": "WF08-Confirmation",
+                "type": "n8n-nodes-base.executeWorkflow",
+                "typeVersion": 1.2,
+                "position": [
+                    1520,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "chatId": "={{ $json.chatId }}",
+                    "text": "\ud83d\udc4b \u041f\u0440\u0438\u0432\u0435\u0442, {{ $json.firstName }}!\n\n\u042f \u0444\u0438\u043d\u0430\u043d\u0441\u043e\u0432\u044b\u0439 \u0431\u043e\u0442 Sofiny.\n\n\u041e\u0442\u043f\u0440\u0430\u0432\u044c \u0444\u0438\u043d\u0430\u043d\u0441\u043e\u0432\u0443\u044e \u043e\u043f\u0435\u0440\u0430\u0446\u0438\u044e \u0442\u0435\u043a\u0441\u0442\u043e\u043c, \u043d\u0430\u043f\u0440\u0438\u043c\u0435\u0440:\n\u00ab\u041e\u043f\u043b\u0430\u0442\u0430 \u0437\u0430 \u0442\u043a\u0430\u043d\u044c 150000 \u0441\u043e \u0441\u0447\u0435\u0442\u0430 Sofiny \u0420\u0421\u00bb\n\n\u042f \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u044e \u0438 \u043f\u043e\u043f\u0440\u043e\u0448\u0443 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c.",
+                    "additionalFields": {}
+                },
+                "id": "01-help",
+                "name": "SendHelp",
+                "type": "n8n-nodes-base.telegram",
+                "typeVersion": 1.2,
+                "position": [
+                    1740,
+                    500
+                ],
+                "credentials": {
+                    "telegramApi": {
+                        "id": "BUi8I5qusGpd92vZ",
+                        "name": "Sofiny-Finance"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "chatId": "={{ $json.chatId }}",
+                    "text": "\u26d4 \u0414\u043e\u0441\u0442\u0443\u043f \u0437\u0430\u043f\u0440\u0435\u0449\u0435\u043d. \u041e\u0431\u0440\u0430\u0442\u0438\u0442\u0435\u0441\u044c \u043a \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0443.",
+                    "additionalFields": {}
+                },
+                "id": "01-unauth",
+                "name": "SendUnauthorized",
+                "type": "n8n-nodes-base.telegram",
+                "typeVersion": 1.2,
+                "position": [
+                    1740,
+                    900
+                ],
+                "credentials": {
+                    "telegramApi": {
+                        "id": "BUi8I5qusGpd92vZ",
+                        "name": "Sofiny-Finance"
+                    }
+                }
+            }
+        ],
+        "connections": {
+            "TelegramTrigger": {
+                "main": [
+                    [
+                        {
+                            "node": "ParseUpdate",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "ParseUpdate": {
+                "main": [
+                    [
+                        {
+                            "node": "RBACCheck",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "RBACCheck": {
+                "main": [
+                    [
+                        {
+                            "node": "DetermineRoute",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "DetermineRoute": {
+                "main": [
+                    [
+                        {
+                            "node": "IsText",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "IsText": {
+                "main": [
+                    [
+                        {
+                            "node": "WF03-TextProcessing",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "IsConfirm",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "IsConfirm": {
+                "main": [
+                    [
+                        {
+                            "node": "WF08-Confirmation",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "IsHelp",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "IsHelp": {
+                "main": [
+                    [
+                        {
+                            "node": "SendHelp",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "SendUnauthorized",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Sergei Kuznetsov",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": []
+    }
+}

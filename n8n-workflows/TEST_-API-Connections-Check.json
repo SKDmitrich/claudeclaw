@@ -1,0 +1,145 @@
+{
+    "updatedAt": "2026-03-12T11:54:59.239Z",
+    "createdAt": "2026-03-12T11:54:59.239Z",
+    "id": "LEVlRc1ET5RLSyXW",
+    "name": "TEST: API Connections Check",
+    "description": null,
+    "active": false,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "t-trigger",
+            "name": "ManualTrigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://marketplace-api.wildberries.ru/api/v3/warehouses",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "sendHeaders": true,
+                "options": {}
+            },
+            "id": "t-wb",
+            "name": "WB-Warehouses",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                450,
+                100
+            ],
+            "credentials": {
+                "httpHeaderAuth": {
+                    "id": "A4XrFIZ6iOjOwaDq",
+                    "name": "Wildberries API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "url": "https://cloud-api.yandex.net/v1/disk/",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "options": {}
+            },
+            "id": "t-ya",
+            "name": "YaDisk-Info",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                450,
+                300
+            ],
+            "credentials": {
+                "httpHeaderAuth": {
+                    "id": "sg48znJCN0RbGDZg",
+                    "name": "Yandex Disk"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "url": "https://api.vk.com/method/groups.getById?v=5.199",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "options": {}
+            },
+            "id": "t-vk",
+            "name": "VK-GroupInfo",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                450,
+                500
+            ],
+            "credentials": {
+                "httpHeaderAuth": {
+                    "id": "WmgdyyBad5eMxOsw",
+                    "name": "VK Sofiny Community"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "ManualTrigger": {
+            "main": [
+                [
+                    {
+                        "node": "WB-Warehouses",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "YaDisk-Info",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "VK-GroupInfo",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "cd0b64e6-83a6-4d99-82ce-bb2db6cd75c4",
+    "activeVersionId": null,
+    "versionCounter": 1,
+    "triggerCount": 0,
+    "shared": [
+        {
+            "updatedAt": "2026-03-12T11:54:59.239Z",
+            "createdAt": "2026-03-12T11:54:59.239Z",
+            "role": "workflow:owner",
+            "workflowId": "LEVlRc1ET5RLSyXW",
+            "projectId": "pxhtEMeW80Eo5SKP",
+            "project": {
+                "updatedAt": "2026-03-10T17:12:13.408Z",
+                "createdAt": "2026-03-09T07:53:55.057Z",
+                "id": "pxhtEMeW80Eo5SKP",
+                "name": "Sergei Kuznetsov <kuznetsovsd89@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "60dd4e61-df83-4185-9492-a10f6ff68e03"
+            }
+        }
+    ],
+    "tags": [],
+    "activeVersion": null
+}

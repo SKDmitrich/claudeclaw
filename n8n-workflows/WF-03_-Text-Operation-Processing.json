@@ -1,0 +1,211 @@
+{
+    "updatedAt": "2026-03-12T03:00:37.478Z",
+    "createdAt": "2026-03-12T03:00:37.478Z",
+    "id": "SzW5d43L9O0Dwk1e",
+    "name": "WF-03: Text Operation Processing",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "03-trigger",
+            "name": "Execute Workflow Trigger",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://openrouter.ai/api/v1/chat/completions",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "openAiApi",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({model:'google/gemini-2.0-flash-001',messages:[{role:'system',content:'\u0422\u044b \u0444\u0438\u043d\u0430\u043d\u0441\u043e\u0432\u044b\u0439 \u0430\u0441\u0441\u0438\u0441\u0442\u0435\u043d\u0442 \u043a\u043e\u043c\u043f\u0430\u043d\u0438\u0438 Sofiny. \u0418\u0437\u0432\u043b\u0435\u043a\u0438 \u043f\u043e\u043b\u044f \u0444\u0438\u043d\u0430\u043d\u0441\u043e\u0432\u043e\u0439 \u043e\u043f\u0435\u0440\u0430\u0446\u0438\u0438 \u0438\u0437 \u0442\u0435\u043a\u0441\u0442\u0430 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f.\n\n\u041e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u044b\u0435 \u043f\u043e\u043b\u044f: date, amount, account_id, counterparty_id, category_id.\n\u041d\u0435\u043e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u044b\u0435: description, currency.\n\n\u0421\u0447\u0435\u0442\u0430: 115516:\u0412\u0422\u0411 \u0411\u0438\u0437\u043d\u0435\u0441 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 118769:\u0421\u0431\u0435\u0440 \u041d\u0430\u043a (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 119277:\u0412\u0422\u0411 \u043a\u0430\u0440\u0442\u0430 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 119280:\u0421\u0431\u0435\u0440 \u043a\u0430\u0440\u0442\u0430 (\u0423\u043d\u0436\u0430\u043a\u043e\u0432\u0430 \u0412.\u0421.), 119281:\u0422-\u0411\u0430\u043d\u043a \u0421\u043e\u0432\u043c (\u0423\u043d\u0436\u0430\u043a\u043e\u0432\u0430 \u0412.\u0421.), 124440:\u0422-\u0411\u0430\u043d\u043a \u0421\u043e\u0432\u043c (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 126356:\u0421\u0431\u0435\u0440 \u043a\u0430\u0440\u0442\u0430 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432\u0430 \u041d.\u041b.), 127434:\u0421\u0431\u0435\u0440 \u041f\u043e\u0441\u0442 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 143461:\u0421\u0431\u0435\u0440 \u041f\u043e\u0441\u0442 (\u0423\u043d\u0436\u0430\u043a\u043e\u0432\u0430 \u0412.\u0421.), 143475:\u0422-\u0411\u0430\u043d\u043a \u0421\u043e\u0432\u043c (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432\u0430 \u041d.\u041b.), 143655:\u0421\u0431\u0435\u0440\u0411\u0438\u0437\u043d\u0435\u0441 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 148716:\u0421\u0431\u0435\u0440\u0411\u0438\u0437\u043d\u0435\u0441 (\u0423\u043d\u0436\u0430\u043a\u043e\u0432\u0430 \u0412.\u0421.), 149282:\u0421\u0431\u0435\u0440 \u041d\u0430\u043a (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432\u0430 \u041d.\u041b.), 149283:\u0421\u0431\u0435\u0440 \u043a\u0430\u0440\u0442\u0430 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 149558:\u0421\u0431\u0435\u0440 \u041d\u0430\u043a (\u0423\u043d\u0436\u0430\u043a\u043e\u0432\u0430), 154253:\u0421\u0431\u0435\u0440 \u0414\u0435\u043f\u043e\u0437\u0438\u0442 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 154254:\u0421\u0431\u0435\u0440 \u0414\u0435\u043f\u043e\u0437\u0438\u0442 (\u0423\u043d\u0436\u0430\u043a\u043e\u0432\u0430 \u0412.\u0421.), 154257:\u0422\u043e\u0447\u043a\u0430 \u0414\u0435\u043f\u043e\u0437\u0438\u0442 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432\u0430 \u041d.\u041b.), 154258:\u0412\u0422\u0411 \u0414\u0435\u043f\u043e\u0437\u0438\u0442 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 156762:\u041d\u0430\u043b\u0438\u0447\u043a\u0430 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.)\n\u0421\u0442\u0430\u0442\u044c\u0438 (\u043f\u0435\u0440\u0432\u044b\u0435 30): 1043939:\u041d\u0435\u0440\u0430\u0437\u043d\u0435\u0441\u0435\u043d\u043d\u043e\u0435 \u043f\u043e\u0441\u0442\u0443\u043f\u043b\u0435\u043d\u0438\u0435(income), 1043940:\u041d\u0435\u0440\u0430\u0437\u043d\u0435\u0441\u0435\u043d\u043d\u043e\u0435 \u0441\u043f\u0438\u0441\u0430\u043d\u0438\u0435(outcome), 1043941:\u041f\u0435\u0440\u0435\u0432\u043e\u0434 \u043c\u0435\u0436\u0434\u0443 \u0441\u0447\u0435\u0442\u0430\u043c\u0438(transfer), 1043942:\u041a\u043e\u043d\u0432\u0435\u0440\u0442\u0430\u0446\u0438\u044f \u0432\u0430\u043b\u044e\u0442(transfer), 1043943:\u0412\u0432\u043e\u0434 \u0441\u0440\u0435\u0434\u0441\u0442\u0432(income), 1043944:\u0412\u044b\u0432\u043e\u0434 \u043f\u0440\u0438\u0431\u044b\u043b\u0438(outcome), 1043945:\u041d\u0430\u043b\u043e\u0433\u0438 \u043d\u0430 \u0434\u043e\u0445\u043e\u0434\u044b (\u043f\u0440\u0438\u0431\u044b\u043b\u044c)(outcome), 1043946:\u041d\u0430\u043b\u043e\u0433\u0438 \u0437\u0430 \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a\u043e\u0432(outcome), 1043947:\u041d\u0414\u0424\u041b(outcome), 1043948:\u0412\u0437\u043d\u043e\u0441\u044b \u0432 \u0444\u043e\u043d\u0434\u044b(outcome), 1043949:\u041f\u043e\u043b\u0443\u0447\u0435\u043d\u0438\u0435 \u043a\u0440\u0435\u0434\u0438\u0442\u0430(income), 1043950:\u0412\u044b\u043f\u043b\u0430\u0442\u0430 \u0442\u0435\u043b\u0430 \u043a\u0440\u0435\u0434\u0438\u0442\u0430(outcome), 1043951:\u041f\u0440\u043e\u0446\u0435\u043d\u0442\u044b \u043f\u043e \u043a\u0440\u0435\u0434\u0438\u0442\u0443(outcome), 1043953:\u0417\u0430\u043a\u0443\u043f\u043a\u0438(outcome), 1043954:\u041f\u043e\u043a\u0443\u043f\u043a\u0430 \u043e\u0441\u043d\u043e\u0432\u043d\u044b\u0445 \u0441\u0440\u0435\u0434\u0441\u0442\u0432(outcome), 1043955:\u041f\u0440\u043e\u0434\u0430\u0436\u0430 \u043e\u0441\u043d\u043e\u0432\u043d\u044b\u0445 \u0441\u0440\u0435\u0434\u0441\u0442\u0432(income), 1044167:\u041f\u043e\u0441\u0442\u0443\u043f\u043b\u0435\u043d\u0438\u044f \u043e\u0442 \u041c\u041f(income), 1045091:\u041f\u0440\u043e\u0447\u0438\u0439 \u0434\u043e\u0445\u043e\u0434(income), 1045093:\u0421\u0435\u0440\u0442\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u044f \u0442\u043e\u0432\u0430\u0440\u0430(outcome), 1045094:\u041f\u043e\u043a\u0443\u043f\u043a\u0430 \u0443\u043f\u0430\u043a\u043e\u0432\u043a\u0438(outcome), 1045095:\u041b\u043e\u0433\u0438\u0441\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0440\u0430\u0441\u0445\u043e\u0434\u044b(outcome), 1045100:\u0421\u0430\u043c\u043e\u0432\u044b\u043a\u0443\u043f\u044b(outcome), 1045103:\u0420\u041a\u041e(outcome), 1045111:\u041e\u0431\u0443\u0447\u0435\u043d\u0438\u0435 \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u043b\u0430(outcome), 1045113:\u041a\u043e\u043c\u0430\u043d\u0434\u0438\u0440\u043e\u0432\u043a\u0438(outcome), 1045114:\u041f\u0440\u0435\u0434\u0441\u0442\u0430\u0432\u0438\u0442\u0435\u043b\u044c\u0441\u043a\u0438\u0435 \u0440\u0430\u0441\u0445\u043e\u0434\u044b(outcome), 1045115:\u041f\u043e\u0438\u0441\u043a \u0438 \u043d\u0430\u0439\u043c \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u043b\u0430(outcome), 1045117:\u0420\u0435\u043a\u043b\u0430\u043c\u0430 \u0438 \u043c\u0430\u0440\u043a\u0435\u0442\u0438\u043d\u0433(outcome), 1045119:\u0420\u0430\u0441\u0445\u043e\u0434\u044b \u043d\u0430 \u041f\u041e \u0438 \u0441\u0435\u0440\u0432\u0438\u0441\u044b(outcome), 1045120:\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u0438\u0432\u043d\u044b\u0435 \u0438 \u044e\u0440\u0438\u0434\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0440\u0430\u0441\u0445\u043e\u0434\u044b(outcome)\n\n\u0415\u0441\u043b\u0438 \u043f\u043e\u043b\u0435 \u043d\u0435\u0432\u043e\u0437\u043c\u043e\u0436\u043d\u043e \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0438\u0442\u044c, \u043f\u043e\u0441\u0442\u0430\u0432\u044c null.\n\u0415\u0441\u043b\u0438 \u0434\u0430\u0442\u0430 \u043d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u0430, \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0439 \u0441\u0435\u0433\u043e\u0434\u043d\u044f.\n\u0412\u0435\u0440\u043d\u0438 \u0422\u041e\u041b\u042c\u041a\u041e JSON \u0431\u0435\u0437 markdown:\n{\"date\":\"YYYY-MM-DD\",\"amount\":\u0447\u0438\u0441\u043b\u043e,\"account_id\":\u0447\u0438\u0441\u043b\u043e \u0438\u043b\u0438 null,\"account_name\":\"\u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435\",\"counterparty_id\":\u0447\u0438\u0441\u043b\u043e \u0438\u043b\u0438 null,\"counterparty_name\":\"\u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435\",\"category_id\":\u0447\u0438\u0441\u043b\u043e \u0438\u043b\u0438 null,\"category_name\":\"\u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435\",\"description\":\"\u043e\u043f\u0438\u0441\u0430\u043d\u0438\u0435\",\"currency\":\"RUB\"}'},{role:'user',content:$('Execute Workflow Trigger').first().json.text}],temperature:0.1,max_tokens:500}) }}"
+            },
+            "id": "03-ai",
+            "name": "Extract Fields (AI)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                470,
+                300
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "nwXd1nhoqt0RWumA",
+                    "name": "OpenRouter"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "const response = $input.first().json;\nconst content = response.choices?.[0]?.message?.content || '{}';\nlet parsed;\ntry {\n  const cleaned = content.replace(/```json?\n?/g,'').replace(/```/g,'').trim();\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  return [{ json: { error: 'parse_failed', raw: content } }];\n}\n\nconst missing = [];\nif (!parsed.date) missing.push('date');\nif (!parsed.amount && parsed.amount !== 0) missing.push('amount');\nif (!parsed.account_id) missing.push('account_id');\nif (!parsed.counterparty_id && !parsed.counterparty_name) missing.push('counterparty');\nif (!parsed.category_id && !parsed.category_name) missing.push('category');\n\nreturn [{ json: {\n  ...parsed,\n  missing_fields: missing,\n  is_complete: missing.length === 0\n}}];"
+            },
+            "id": "03-parse",
+            "name": "Parse AI Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                690,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Execute Workflow Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Extract Fields (AI)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extract Fields (AI)": {
+            "main": [
+                [
+                    {
+                        "node": "Parse AI Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "81695ee3-3237-45d8-92f2-468c14c0bae3",
+    "activeVersionId": "81695ee3-3237-45d8-92f2-468c14c0bae3",
+    "versionCounter": 11,
+    "triggerCount": 0,
+    "shared": [
+        {
+            "updatedAt": "2026-03-12T03:00:37.478Z",
+            "createdAt": "2026-03-12T03:00:37.478Z",
+            "role": "workflow:owner",
+            "workflowId": "SzW5d43L9O0Dwk1e",
+            "projectId": "pxhtEMeW80Eo5SKP",
+            "project": {
+                "updatedAt": "2026-03-10T17:12:13.408Z",
+                "createdAt": "2026-03-09T07:53:55.057Z",
+                "id": "pxhtEMeW80Eo5SKP",
+                "name": "Sergei Kuznetsov <kuznetsovsd89@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "60dd4e61-df83-4185-9492-a10f6ff68e03"
+            }
+        }
+    ],
+    "tags": [],
+    "activeVersion": {
+        "updatedAt": "2026-03-12T03:00:37.489Z",
+        "createdAt": "2026-03-12T03:00:37.489Z",
+        "versionId": "81695ee3-3237-45d8-92f2-468c14c0bae3",
+        "workflowId": "SzW5d43L9O0Dwk1e",
+        "nodes": [
+            {
+                "parameters": {},
+                "id": "03-trigger",
+                "name": "Execute Workflow Trigger",
+                "type": "n8n-nodes-base.executeWorkflowTrigger",
+                "typeVersion": 1,
+                "position": [
+                    250,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://openrouter.ai/api/v1/chat/completions",
+                    "authentication": "predefinedCredentialType",
+                    "nodeCredentialType": "openAiApi",
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({model:'google/gemini-2.0-flash-001',messages:[{role:'system',content:'\u0422\u044b \u0444\u0438\u043d\u0430\u043d\u0441\u043e\u0432\u044b\u0439 \u0430\u0441\u0441\u0438\u0441\u0442\u0435\u043d\u0442 \u043a\u043e\u043c\u043f\u0430\u043d\u0438\u0438 Sofiny. \u0418\u0437\u0432\u043b\u0435\u043a\u0438 \u043f\u043e\u043b\u044f \u0444\u0438\u043d\u0430\u043d\u0441\u043e\u0432\u043e\u0439 \u043e\u043f\u0435\u0440\u0430\u0446\u0438\u0438 \u0438\u0437 \u0442\u0435\u043a\u0441\u0442\u0430 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f.\n\n\u041e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u044b\u0435 \u043f\u043e\u043b\u044f: date, amount, account_id, counterparty_id, category_id.\n\u041d\u0435\u043e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u044b\u0435: description, currency.\n\n\u0421\u0447\u0435\u0442\u0430: 115516:\u0412\u0422\u0411 \u0411\u0438\u0437\u043d\u0435\u0441 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 118769:\u0421\u0431\u0435\u0440 \u041d\u0430\u043a (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 119277:\u0412\u0422\u0411 \u043a\u0430\u0440\u0442\u0430 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 119280:\u0421\u0431\u0435\u0440 \u043a\u0430\u0440\u0442\u0430 (\u0423\u043d\u0436\u0430\u043a\u043e\u0432\u0430 \u0412.\u0421.), 119281:\u0422-\u0411\u0430\u043d\u043a \u0421\u043e\u0432\u043c (\u0423\u043d\u0436\u0430\u043a\u043e\u0432\u0430 \u0412.\u0421.), 124440:\u0422-\u0411\u0430\u043d\u043a \u0421\u043e\u0432\u043c (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 126356:\u0421\u0431\u0435\u0440 \u043a\u0430\u0440\u0442\u0430 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432\u0430 \u041d.\u041b.), 127434:\u0421\u0431\u0435\u0440 \u041f\u043e\u0441\u0442 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 143461:\u0421\u0431\u0435\u0440 \u041f\u043e\u0441\u0442 (\u0423\u043d\u0436\u0430\u043a\u043e\u0432\u0430 \u0412.\u0421.), 143475:\u0422-\u0411\u0430\u043d\u043a \u0421\u043e\u0432\u043c (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432\u0430 \u041d.\u041b.), 143655:\u0421\u0431\u0435\u0440\u0411\u0438\u0437\u043d\u0435\u0441 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 148716:\u0421\u0431\u0435\u0440\u0411\u0438\u0437\u043d\u0435\u0441 (\u0423\u043d\u0436\u0430\u043a\u043e\u0432\u0430 \u0412.\u0421.), 149282:\u0421\u0431\u0435\u0440 \u041d\u0430\u043a (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432\u0430 \u041d.\u041b.), 149283:\u0421\u0431\u0435\u0440 \u043a\u0430\u0440\u0442\u0430 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 149558:\u0421\u0431\u0435\u0440 \u041d\u0430\u043a (\u0423\u043d\u0436\u0430\u043a\u043e\u0432\u0430), 154253:\u0421\u0431\u0435\u0440 \u0414\u0435\u043f\u043e\u0437\u0438\u0442 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 154254:\u0421\u0431\u0435\u0440 \u0414\u0435\u043f\u043e\u0437\u0438\u0442 (\u0423\u043d\u0436\u0430\u043a\u043e\u0432\u0430 \u0412.\u0421.), 154257:\u0422\u043e\u0447\u043a\u0430 \u0414\u0435\u043f\u043e\u0437\u0438\u0442 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432\u0430 \u041d.\u041b.), 154258:\u0412\u0422\u0411 \u0414\u0435\u043f\u043e\u0437\u0438\u0442 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.), 156762:\u041d\u0430\u043b\u0438\u0447\u043a\u0430 (\u041a\u0443\u0437\u043d\u0435\u0446\u043e\u0432 \u0421.\u0414.)\n\u0421\u0442\u0430\u0442\u044c\u0438 (\u043f\u0435\u0440\u0432\u044b\u0435 30): 1043939:\u041d\u0435\u0440\u0430\u0437\u043d\u0435\u0441\u0435\u043d\u043d\u043e\u0435 \u043f\u043e\u0441\u0442\u0443\u043f\u043b\u0435\u043d\u0438\u0435(income), 1043940:\u041d\u0435\u0440\u0430\u0437\u043d\u0435\u0441\u0435\u043d\u043d\u043e\u0435 \u0441\u043f\u0438\u0441\u0430\u043d\u0438\u0435(outcome), 1043941:\u041f\u0435\u0440\u0435\u0432\u043e\u0434 \u043c\u0435\u0436\u0434\u0443 \u0441\u0447\u0435\u0442\u0430\u043c\u0438(transfer), 1043942:\u041a\u043e\u043d\u0432\u0435\u0440\u0442\u0430\u0446\u0438\u044f \u0432\u0430\u043b\u044e\u0442(transfer), 1043943:\u0412\u0432\u043e\u0434 \u0441\u0440\u0435\u0434\u0441\u0442\u0432(income), 1043944:\u0412\u044b\u0432\u043e\u0434 \u043f\u0440\u0438\u0431\u044b\u043b\u0438(outcome), 1043945:\u041d\u0430\u043b\u043e\u0433\u0438 \u043d\u0430 \u0434\u043e\u0445\u043e\u0434\u044b (\u043f\u0440\u0438\u0431\u044b\u043b\u044c)(outcome), 1043946:\u041d\u0430\u043b\u043e\u0433\u0438 \u0437\u0430 \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a\u043e\u0432(outcome), 1043947:\u041d\u0414\u0424\u041b(outcome), 1043948:\u0412\u0437\u043d\u043e\u0441\u044b \u0432 \u0444\u043e\u043d\u0434\u044b(outcome), 1043949:\u041f\u043e\u043b\u0443\u0447\u0435\u043d\u0438\u0435 \u043a\u0440\u0435\u0434\u0438\u0442\u0430(income), 1043950:\u0412\u044b\u043f\u043b\u0430\u0442\u0430 \u0442\u0435\u043b\u0430 \u043a\u0440\u0435\u0434\u0438\u0442\u0430(outcome), 1043951:\u041f\u0440\u043e\u0446\u0435\u043d\u0442\u044b \u043f\u043e \u043a\u0440\u0435\u0434\u0438\u0442\u0443(outcome), 1043953:\u0417\u0430\u043a\u0443\u043f\u043a\u0438(outcome), 1043954:\u041f\u043e\u043a\u0443\u043f\u043a\u0430 \u043e\u0441\u043d\u043e\u0432\u043d\u044b\u0445 \u0441\u0440\u0435\u0434\u0441\u0442\u0432(outcome), 1043955:\u041f\u0440\u043e\u0434\u0430\u0436\u0430 \u043e\u0441\u043d\u043e\u0432\u043d\u044b\u0445 \u0441\u0440\u0435\u0434\u0441\u0442\u0432(income), 1044167:\u041f\u043e\u0441\u0442\u0443\u043f\u043b\u0435\u043d\u0438\u044f \u043e\u0442 \u041c\u041f(income), 1045091:\u041f\u0440\u043e\u0447\u0438\u0439 \u0434\u043e\u0445\u043e\u0434(income), 1045093:\u0421\u0435\u0440\u0442\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u044f \u0442\u043e\u0432\u0430\u0440\u0430(outcome), 1045094:\u041f\u043e\u043a\u0443\u043f\u043a\u0430 \u0443\u043f\u0430\u043a\u043e\u0432\u043a\u0438(outcome), 1045095:\u041b\u043e\u0433\u0438\u0441\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0440\u0430\u0441\u0445\u043e\u0434\u044b(outcome), 1045100:\u0421\u0430\u043c\u043e\u0432\u044b\u043a\u0443\u043f\u044b(outcome), 1045103:\u0420\u041a\u041e(outcome), 1045111:\u041e\u0431\u0443\u0447\u0435\u043d\u0438\u0435 \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u043b\u0430(outcome), 1045113:\u041a\u043e\u043c\u0430\u043d\u0434\u0438\u0440\u043e\u0432\u043a\u0438(outcome), 1045114:\u041f\u0440\u0435\u0434\u0441\u0442\u0430\u0432\u0438\u0442\u0435\u043b\u044c\u0441\u043a\u0438\u0435 \u0440\u0430\u0441\u0445\u043e\u0434\u044b(outcome), 1045115:\u041f\u043e\u0438\u0441\u043a \u0438 \u043d\u0430\u0439\u043c \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u043b\u0430(outcome), 1045117:\u0420\u0435\u043a\u043b\u0430\u043c\u0430 \u0438 \u043c\u0430\u0440\u043a\u0435\u0442\u0438\u043d\u0433(outcome), 1045119:\u0420\u0430\u0441\u0445\u043e\u0434\u044b \u043d\u0430 \u041f\u041e \u0438 \u0441\u0435\u0440\u0432\u0438\u0441\u044b(outcome), 1045120:\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u0438\u0432\u043d\u044b\u0435 \u0438 \u044e\u0440\u0438\u0434\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0440\u0430\u0441\u0445\u043e\u0434\u044b(outcome)\n\n\u0415\u0441\u043b\u0438 \u043f\u043e\u043b\u0435 \u043d\u0435\u0432\u043e\u0437\u043c\u043e\u0436\u043d\u043e \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0438\u0442\u044c, \u043f\u043e\u0441\u0442\u0430\u0432\u044c null.\n\u0415\u0441\u043b\u0438 \u0434\u0430\u0442\u0430 \u043d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u0430, \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0439 \u0441\u0435\u0433\u043e\u0434\u043d\u044f.\n\u0412\u0435\u0440\u043d\u0438 \u0422\u041e\u041b\u042c\u041a\u041e JSON \u0431\u0435\u0437 markdown:\n{\"date\":\"YYYY-MM-DD\",\"amount\":\u0447\u0438\u0441\u043b\u043e,\"account_id\":\u0447\u0438\u0441\u043b\u043e \u0438\u043b\u0438 null,\"account_name\":\"\u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435\",\"counterparty_id\":\u0447\u0438\u0441\u043b\u043e \u0438\u043b\u0438 null,\"counterparty_name\":\"\u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435\",\"category_id\":\u0447\u0438\u0441\u043b\u043e \u0438\u043b\u0438 null,\"category_name\":\"\u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435\",\"description\":\"\u043e\u043f\u0438\u0441\u0430\u043d\u0438\u0435\",\"currency\":\"RUB\"}'},{role:'user',content:$('Execute Workflow Trigger').first().json.text}],temperature:0.1,max_tokens:500}) }}"
+                },
+                "id": "03-ai",
+                "name": "Extract Fields (AI)",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    470,
+                    300
+                ],
+                "credentials": {
+                    "openAiApi": {
+                        "id": "nwXd1nhoqt0RWumA",
+                        "name": "OpenRouter"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "jsCode": "const response = $input.first().json;\nconst content = response.choices?.[0]?.message?.content || '{}';\nlet parsed;\ntry {\n  const cleaned = content.replace(/```json?\n?/g,'').replace(/```/g,'').trim();\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  return [{ json: { error: 'parse_failed', raw: content } }];\n}\n\nconst missing = [];\nif (!parsed.date) missing.push('date');\nif (!parsed.amount && parsed.amount !== 0) missing.push('amount');\nif (!parsed.account_id) missing.push('account_id');\nif (!parsed.counterparty_id && !parsed.counterparty_name) missing.push('counterparty');\nif (!parsed.category_id && !parsed.category_name) missing.push('category');\n\nreturn [{ json: {\n  ...parsed,\n  missing_fields: missing,\n  is_complete: missing.length === 0\n}}];"
+                },
+                "id": "03-parse",
+                "name": "Parse AI Response",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    690,
+                    300
+                ]
+            }
+        ],
+        "connections": {
+            "Execute Workflow Trigger": {
+                "main": [
+                    [
+                        {
+                            "node": "Extract Fields (AI)",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Extract Fields (AI)": {
+                "main": [
+                    [
+                        {
+                            "node": "Parse AI Response",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Sergei Kuznetsov",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-03-12T03:02:34.944Z",
+                "id": 7,
+                "workflowId": "SzW5d43L9O0Dwk1e",
+                "versionId": "81695ee3-3237-45d8-92f2-468c14c0bae3",
+                "event": "activated",
+                "userId": "60dd4e61-df83-4185-9492-a10f6ff68e03"
+            }
+        ]
+    }
+}

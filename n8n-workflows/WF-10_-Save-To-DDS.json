@@ -1,0 +1,229 @@
+{
+    "updatedAt": "2026-03-12T03:22:57.705Z",
+    "createdAt": "2026-03-12T03:22:57.705Z",
+    "id": "BPxW3jNN1D4xOXxA",
+    "name": "WF-10: Save To DDS",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "10-trigger",
+            "name": "Execute Workflow Trigger",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const input = $input.first().json;\nconst crypto = require('crypto');\nconst now = new Date().toISOString();\nconst id = 'txn_' + crypto.randomUUID().slice(0,8);\n\nreturn [{ json: {\n  id: id,\n  date: input.date || '',\n  amount: String(input.amount || ''),\n  currency: input.currency || 'RUB',\n  type: Number(input.amount) >= 0 ? 'income' : 'outcome',\n  account_id: input.account_id || '',\n  account_name: input.account_name || '',\n  counterparty_id: input.counterparty_id || '',\n  counterparty_name: input.counterparty_name || '',\n  category_id: input.category_id || '',\n  category_name: input.category_name || '',\n  description: input.description || '',\n  source: input.source || 'telegram',\n  created_by: input.user_id || '',\n  created_at: now,\n  status: 'confirmed'\n}}];"
+            },
+            "id": "10-code",
+            "name": "Format DDS Record",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                470,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "append",
+                "documentId": {
+                    "__rl": true,
+                    "value": "1F0Ub4hPwoFNQQBVpIxx0IYKiZq8ihetuKeKHBB516ng",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "gid=1578717648",
+                    "mode": "id"
+                },
+                "columns": {
+                    "mappingMode": "autoMapInputData",
+                    "matchingColumns": []
+                },
+                "options": {}
+            },
+            "id": "10-sheets",
+            "name": "Write to DDS_MAIN",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                690,
+                300
+            ],
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "R9k8DzUEcW6HjwIn",
+                    "name": "Google Sheets account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Execute Workflow Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Format DDS Record",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format DDS Record": {
+            "main": [
+                [
+                    {
+                        "node": "Write to DDS_MAIN",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "a62a2b0e-7483-4073-8cc9-0c867c70d808",
+    "activeVersionId": "a62a2b0e-7483-4073-8cc9-0c867c70d808",
+    "versionCounter": 11,
+    "triggerCount": 0,
+    "shared": [
+        {
+            "updatedAt": "2026-03-12T03:22:57.705Z",
+            "createdAt": "2026-03-12T03:22:57.705Z",
+            "role": "workflow:owner",
+            "workflowId": "BPxW3jNN1D4xOXxA",
+            "projectId": "pxhtEMeW80Eo5SKP",
+            "project": {
+                "updatedAt": "2026-03-10T17:12:13.408Z",
+                "createdAt": "2026-03-09T07:53:55.057Z",
+                "id": "pxhtEMeW80Eo5SKP",
+                "name": "Sergei Kuznetsov <kuznetsovsd89@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "60dd4e61-df83-4185-9492-a10f6ff68e03"
+            }
+        }
+    ],
+    "tags": [],
+    "activeVersion": {
+        "updatedAt": "2026-03-12T03:22:57.710Z",
+        "createdAt": "2026-03-12T03:22:57.710Z",
+        "versionId": "a62a2b0e-7483-4073-8cc9-0c867c70d808",
+        "workflowId": "BPxW3jNN1D4xOXxA",
+        "nodes": [
+            {
+                "parameters": {},
+                "id": "10-trigger",
+                "name": "Execute Workflow Trigger",
+                "type": "n8n-nodes-base.executeWorkflowTrigger",
+                "typeVersion": 1,
+                "position": [
+                    250,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "jsCode": "const input = $input.first().json;\nconst crypto = require('crypto');\nconst now = new Date().toISOString();\nconst id = 'txn_' + crypto.randomUUID().slice(0,8);\n\nreturn [{ json: {\n  id: id,\n  date: input.date || '',\n  amount: String(input.amount || ''),\n  currency: input.currency || 'RUB',\n  type: Number(input.amount) >= 0 ? 'income' : 'outcome',\n  account_id: input.account_id || '',\n  account_name: input.account_name || '',\n  counterparty_id: input.counterparty_id || '',\n  counterparty_name: input.counterparty_name || '',\n  category_id: input.category_id || '',\n  category_name: input.category_name || '',\n  description: input.description || '',\n  source: input.source || 'telegram',\n  created_by: input.user_id || '',\n  created_at: now,\n  status: 'confirmed'\n}}];"
+                },
+                "id": "10-code",
+                "name": "Format DDS Record",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    470,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "operation": "append",
+                    "documentId": {
+                        "__rl": true,
+                        "value": "1F0Ub4hPwoFNQQBVpIxx0IYKiZq8ihetuKeKHBB516ng",
+                        "mode": "id"
+                    },
+                    "sheetName": {
+                        "__rl": true,
+                        "value": "gid=1578717648",
+                        "mode": "id"
+                    },
+                    "columns": {
+                        "mappingMode": "autoMapInputData",
+                        "matchingColumns": []
+                    },
+                    "options": {}
+                },
+                "id": "10-sheets",
+                "name": "Write to DDS_MAIN",
+                "type": "n8n-nodes-base.googleSheets",
+                "typeVersion": 4.5,
+                "position": [
+                    690,
+                    300
+                ],
+                "credentials": {
+                    "googleSheetsOAuth2Api": {
+                        "id": "R9k8DzUEcW6HjwIn",
+                        "name": "Google Sheets account"
+                    }
+                }
+            }
+        ],
+        "connections": {
+            "Execute Workflow Trigger": {
+                "main": [
+                    [
+                        {
+                            "node": "Format DDS Record",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Format DDS Record": {
+                "main": [
+                    [
+                        {
+                            "node": "Write to DDS_MAIN",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Sergei Kuznetsov",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-03-12T03:22:58.246Z",
+                "id": 20,
+                "workflowId": "BPxW3jNN1D4xOXxA",
+                "versionId": "a62a2b0e-7483-4073-8cc9-0c867c70d808",
+                "event": "activated",
+                "userId": "60dd4e61-df83-4185-9492-a10f6ff68e03"
+            }
+        ]
+    }
+}

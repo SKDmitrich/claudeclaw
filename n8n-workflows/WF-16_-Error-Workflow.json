@@ -1,0 +1,294 @@
+{
+    "updatedAt": "2026-03-12T03:34:18.220Z",
+    "createdAt": "2026-03-12T03:33:46.109Z",
+    "id": "bwBm5ClR6XWTdfZu",
+    "name": "WF-16: Error Workflow",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "16-trigger",
+            "name": "Error Trigger",
+            "type": "n8n-nodes-base.errorTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const now = new Date().toISOString();\nconst exec = $input.first().json;\nconst wfName = exec.workflow?.name || 'unknown';\nconst nodeName = exec.execution?.error?.node?.name || '';\nconst errType = exec.execution?.error?.name || 'UnknownError';\nconst errMsg = exec.execution?.error?.message || JSON.stringify(exec.execution?.error || '');\nreturn [{\n  json: {\n    timestamp: now,\n    workflow: wfName,\n    node: nodeName,\n    error_type: errType,\n    error_message: errMsg.slice(0, 500),\n    input_data: '',\n    resolved: 'no',\n    notify_text: '\u26a0\ufe0f \u041e\u0448\u0438\u0431\u043a\u0430 \u0432 ' + wfName + '\\n\u041d\u043e\u0434\u0430: ' + nodeName + '\\n' + errType + ': ' + errMsg.slice(0, 200)\n  }\n}];"
+            },
+            "id": "16-code",
+            "name": "Format Error",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                470,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "append",
+                "documentId": {
+                    "__rl": true,
+                    "value": "1F0Ub4hPwoFNQQBVpIxx0IYKiZq8ihetuKeKHBB516ng",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "gid=1728316989",
+                    "mode": "id"
+                },
+                "columns": {
+                    "mappingMode": "defineBelow",
+                    "value": {
+                        "timestamp": "={{ $json.timestamp }}",
+                        "workflow": "={{ $json.workflow }}",
+                        "node": "={{ $json.node }}",
+                        "error_type": "={{ $json.error_type }}",
+                        "error_message": "={{ $json.error_message }}",
+                        "input_data": "={{ $json.input_data }}",
+                        "resolved": "={{ $json.resolved }}"
+                    },
+                    "matchingColumns": []
+                },
+                "options": {}
+            },
+            "id": "16-sheets",
+            "name": "Write to ERROR_LOG",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                690,
+                300
+            ],
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "R9k8DzUEcW6HjwIn",
+                    "name": "Google Sheets account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "chatId": "482728189",
+                "text": "={{ $json.notify_text }}",
+                "additionalFields": {}
+            },
+            "id": "16-tg",
+            "name": "Notify Admin",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                690,
+                500
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "BUi8I5qusGpd92vZ",
+                    "name": "Sofiny-Finance"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Error Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Format Error",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format Error": {
+            "main": [
+                [
+                    {
+                        "node": "Write to ERROR_LOG",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Notify Admin",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "0dd309b2-5271-421f-8bb4-eff1254d0e0f",
+    "activeVersionId": "0dd309b2-5271-421f-8bb4-eff1254d0e0f",
+    "versionCounter": 6,
+    "triggerCount": 0,
+    "shared": [
+        {
+            "updatedAt": "2026-03-12T03:33:46.109Z",
+            "createdAt": "2026-03-12T03:33:46.109Z",
+            "role": "workflow:owner",
+            "workflowId": "bwBm5ClR6XWTdfZu",
+            "projectId": "pxhtEMeW80Eo5SKP",
+            "project": {
+                "updatedAt": "2026-03-10T17:12:13.408Z",
+                "createdAt": "2026-03-09T07:53:55.057Z",
+                "id": "pxhtEMeW80Eo5SKP",
+                "name": "Sergei Kuznetsov <kuznetsovsd89@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "60dd4e61-df83-4185-9492-a10f6ff68e03"
+            }
+        }
+    ],
+    "tags": [],
+    "activeVersion": {
+        "updatedAt": "2026-03-12T03:33:46.127Z",
+        "createdAt": "2026-03-12T03:33:46.127Z",
+        "versionId": "0dd309b2-5271-421f-8bb4-eff1254d0e0f",
+        "workflowId": "bwBm5ClR6XWTdfZu",
+        "nodes": [
+            {
+                "parameters": {},
+                "id": "16-trigger",
+                "name": "Error Trigger",
+                "type": "n8n-nodes-base.errorTrigger",
+                "typeVersion": 1,
+                "position": [
+                    250,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "jsCode": "const now = new Date().toISOString();\nconst exec = $input.first().json;\nconst wfName = exec.workflow?.name || 'unknown';\nconst nodeName = exec.execution?.error?.node?.name || '';\nconst errType = exec.execution?.error?.name || 'UnknownError';\nconst errMsg = exec.execution?.error?.message || JSON.stringify(exec.execution?.error || '');\nreturn [{\n  json: {\n    timestamp: now,\n    workflow: wfName,\n    node: nodeName,\n    error_type: errType,\n    error_message: errMsg.slice(0, 500),\n    input_data: '',\n    resolved: 'no',\n    notify_text: '\u26a0\ufe0f \u041e\u0448\u0438\u0431\u043a\u0430 \u0432 ' + wfName + '\\n\u041d\u043e\u0434\u0430: ' + nodeName + '\\n' + errType + ': ' + errMsg.slice(0, 200)\n  }\n}];"
+                },
+                "id": "16-code",
+                "name": "Format Error",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    470,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "operation": "append",
+                    "documentId": {
+                        "__rl": true,
+                        "value": "1F0Ub4hPwoFNQQBVpIxx0IYKiZq8ihetuKeKHBB516ng",
+                        "mode": "id"
+                    },
+                    "sheetName": {
+                        "__rl": true,
+                        "value": "gid=1728316989",
+                        "mode": "id"
+                    },
+                    "columns": {
+                        "mappingMode": "defineBelow",
+                        "value": {
+                            "timestamp": "={{ $json.timestamp }}",
+                            "workflow": "={{ $json.workflow }}",
+                            "node": "={{ $json.node }}",
+                            "error_type": "={{ $json.error_type }}",
+                            "error_message": "={{ $json.error_message }}",
+                            "input_data": "={{ $json.input_data }}",
+                            "resolved": "={{ $json.resolved }}"
+                        },
+                        "matchingColumns": []
+                    },
+                    "options": {}
+                },
+                "id": "16-sheets",
+                "name": "Write to ERROR_LOG",
+                "type": "n8n-nodes-base.googleSheets",
+                "typeVersion": 4.5,
+                "position": [
+                    690,
+                    300
+                ],
+                "credentials": {
+                    "googleSheetsOAuth2Api": {
+                        "id": "R9k8DzUEcW6HjwIn",
+                        "name": "Google Sheets account"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "chatId": "482728189",
+                    "text": "={{ $json.notify_text }}",
+                    "additionalFields": {}
+                },
+                "id": "16-tg",
+                "name": "Notify Admin",
+                "type": "n8n-nodes-base.telegram",
+                "typeVersion": 1.2,
+                "position": [
+                    690,
+                    500
+                ],
+                "credentials": {
+                    "telegramApi": {
+                        "id": "BUi8I5qusGpd92vZ",
+                        "name": "Sofiny-Finance"
+                    }
+                }
+            }
+        ],
+        "connections": {
+            "Error Trigger": {
+                "main": [
+                    [
+                        {
+                            "node": "Format Error",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Format Error": {
+                "main": [
+                    [
+                        {
+                            "node": "Write to ERROR_LOG",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "Notify Admin",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Sergei Kuznetsov",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": []
+    }
+}
