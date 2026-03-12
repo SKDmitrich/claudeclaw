@@ -83,11 +83,13 @@ async function main() {
     } catch { /* ignore */ }
   }
 
+  const normalize = (s: string) => s.replace(/[.\s]/g, '').toLowerCase()
+
   const handleAccountsSync = (zenAccounts: Array<{ id: string; title: string; syncID: string[] | null }>) => {
     const cards = getAllCards()
     for (const zenAcc of zenAccounts) {
       const match = cards.find(c =>
-        c.fintablo_account_name === zenAcc.title && !c.zenmoney_account_id
+        normalize(c.fintablo_account_name) === normalize(zenAcc.title) && !c.zenmoney_account_id
       )
       if (match) {
         linkCardToZenmoney(match.fintablo_account_id, zenAcc.id)
