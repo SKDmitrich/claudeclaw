@@ -1,4 +1,4 @@
-import { initDatabase, seedDirections, getCardByZenmoneyAccount, getCardByFintabloId, getManagerById, createPendingTransaction, getPendingTransactionByZenmoneyId } from './db.js'
+import { initDatabase, seedDirections, getCardByZenmoneyAccount, getCardByFintabloId, getManagerById, createPendingTransaction, getPendingTransactionByZenmoneyId, getAllCards, linkCardToZenmoney } from './db.js'
 import { syncAccountsFromFintablo } from './handlers/admin.js'
 import { createBot } from './bot.js'
 import { startPolling, stopPolling, type ZenMoneyTransaction } from './zenmoney.js'
@@ -83,7 +83,20 @@ async function main() {
     } catch { /* ignore */ }
   }
 
-  startPolling(handleNewTransaction, handleAuthError)
+  const handleAccountsSync = (zenAccounts: Array<{ id: string; title: string; syncID: string[] | null }>) => {
+    const cards = getAllCards()
+    for (const zenAcc of zenAccounts) {
+      const match = cards.find(c =>
+        c.fintablo_account_name === zenAcc.title && !c.zenmoney_account_id
+      )
+      if (match) {
+        linkCardToZenmoney(match.fintablo_account_id, zenAcc.id)
+        logger.info({ card: match.fintablo_account_name, zenmoneyId: zenAcc.id }, 'Auto-linked ZenMoney account by name')
+      }
+    }
+  }
+
+  startPolling(handleNewTransaction, handleAuthError, handleAccountsSync)
   logger.info('ZenMoney polling started')
 
   // Graceful shutdown

@@ -66,7 +66,8 @@ export async function fetchNewTransactions(): Promise<{ transactions: ZenMoneyTr
 
 export function startPolling(
   onNewTransaction: (txn: ZenMoneyTransaction) => Promise<void>,
-  onAuthError: () => void
+  onAuthError: () => void,
+  onAccountsSync?: (accounts: Array<{ id: string; title: string; syncID: string[] | null }>) => void
 ): void {
   if (polling) return
   polling = true
@@ -74,8 +75,12 @@ export function startPolling(
   const poll = async () => {
     try {
       logger.info('ZenMoney: polling for new transactions...')
-      const { transactions } = await fetchNewTransactions()
+      const { transactions, accounts } = await fetchNewTransactions()
       logger.info({ count: transactions.length }, 'ZenMoney: got transactions')
+
+      if (accounts.length > 0 && onAccountsSync) {
+        onAccountsSync(accounts)
+      }
 
       for (const txn of transactions) {
         try {
