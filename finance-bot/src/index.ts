@@ -1,4 +1,4 @@
-import { initDatabase, seedDirections, getCardByZenmoneyAccount, getCardByFintabloId, getManagerById, createPendingTransaction, getPendingTransactionByZenmoneyId, getAllCards, linkCardToZenmoney } from './db.js'
+import { initDatabase, seedDirections, getCardByZenmoneyAccount, getCardByFintabloId, getManagerById, createPendingTransaction, getPendingTransactionByZenmoneyId, getAllCards, linkCardToZenmoney, getAllDirections } from './db.js'
 import { syncAccountsFromFintablo } from './handlers/admin.js'
 import { createBot } from './bot.js'
 import { startPolling, stopPolling, type ZenMoneyTransaction } from './zenmoney.js'
@@ -54,6 +54,17 @@ async function main() {
 
     const accountInfo = card.fintablo_account_name
 
+    // Resolve direction from card's internal direction_id
+    let fintabloDirectionId: number | null = null
+    let directionName: string | null = null
+    if (card.direction_id) {
+      const dir = getAllDirections().find(d => d.id === card.direction_id)
+      if (dir) {
+        fintabloDirectionId = dir.fintablo_direction_id
+        directionName = dir.name
+      }
+    }
+
     // Create pending transaction
     const txnId = createPendingTransaction({
       zenmoney_txn_id: txn.id,
@@ -61,7 +72,9 @@ async function main() {
       amount: txn.outcome,
       date: txn.date,
       account_info: accountInfo,
-      direction_id: card.direction_id,
+      account_id: card.fintablo_account_id,
+      direction_id: fintabloDirectionId,
+      direction_name: directionName,
     })
 
     logger.info({ txnId, zenTxnId: txn.id, manager: manager.name, amount: txn.outcome }, 'New transaction for manager')

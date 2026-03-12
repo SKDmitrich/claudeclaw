@@ -42,6 +42,9 @@ const MANAGER_CATEGORIES = [
   { id: 1045121, name: 'Фотоконтент' },
   { id: 1045119, name: 'ПО и сервисы' },
   { id: 1045095, name: 'Логистика' },
+  { id: 1342729, name: 'Брак' },
+  { id: 1045094, name: 'Упаковка' },
+  { id: 1327155, name: 'Упаковка не вх с/с' },
 ]
 
 export async function expenseHandler(ctx: Context): Promise<void> {
@@ -525,7 +528,7 @@ export async function processNextInQueue(api: Api, telegramUserId: number): Prom
   try {
     await api.sendMessage(
       String(telegramUserId),
-      `Списание ${txn.amount}₽ (${txn.account_info ?? '?'}) ${txn.date}\nНа что?`,
+      `Списание ${txn.amount}₽ (${txn.account_info ?? '?'}) ${txn.date}\nНа что были потрачены деньги?`,
       { reply_markup: { force_reply: true } }
     )
   } catch (err) {
@@ -556,7 +559,7 @@ export async function notifyManagerAboutTransaction(
   try {
     const msg = await api.sendMessage(
       String(telegramUserId),
-      `Списание ${amount}₽ (${accountInfo}) ${date}\nНа что?`,
+      `Списание ${amount}₽ (${accountInfo}) ${date}\nНа что были потрачены деньги?`,
       { reply_markup: { force_reply: true } }
     )
     updatePendingTransaction(txnId, { bot_message_id: msg.message_id })
