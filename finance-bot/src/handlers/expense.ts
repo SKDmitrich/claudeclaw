@@ -20,6 +20,20 @@ const FIELD_LABELS: Record<MissingField, string> = {
   category: 'Статья расходов',
   direction: 'Направление бизнеса',
   counterparty: 'Контрагент (кому/от кого)',
+  description: 'Описание',
+}
+
+// Pre-parse obvious amount from text like "500 руб", "1200₽", "300 р"
+function preParseAmount(text: string): { amount: number | undefined; cleanText: string } {
+  const match = text.match(/(\d[\d\s]*(?:[.,]\d+)?)\s*(?:руб\.?|рублей|₽|р\.?\b)/i)
+  if (match) {
+    const num = parseFloat(match[1].replace(/\s/g, '').replace(',', '.'))
+    if (!isNaN(num)) {
+      const cleanText = text.replace(match[0], '').trim()
+      return { amount: num, cleanText: cleanText || text }
+    }
+  }
+  return { amount: undefined, cleanText: text }
 }
 
 // Manager categories (from FinTablo) -- short names for callback_data
@@ -167,8 +181,9 @@ async function handleExpenseDescription(
 
   await ctx.replyWithChatAction('typing')
 
-  const extracted = await extractExpenseFields(text, {
-    amount: txn.amount ?? undefined,
+  const { amount: preParsedAmount, cleanText } = preParseAmount(text)
+  const extracted = await extractExpenseFields(cleanText, {
+    amount: preParsedAmount ?? txn.amount ?? undefined,
     date: txn.date ?? undefined,
     accountName: txn.account_info ?? undefined,
   })
@@ -176,7 +191,7 @@ async function handleExpenseDescription(
   let updates: Partial<PendingTransaction> = {
     status: 'enriched',
     date: extracted.date ?? txn.date,
-    amount: extracted.amount ?? txn.amount,
+    amount: preParsedAmount ?? extracted.amount ?? txn.amount,
     category_id: extracted.category_id,
     category_name: extracted.category_name,
     direction_id: extracted.direction_id ?? txn.direction_id,
@@ -239,6 +254,9 @@ async function handleFillingField(
     case 'counterparty':
       update.counterparty_name = text.trim()
       break
+    case 'description':
+      update.description = text.trim()
+      break
   }
 
   updatePendingTransaction(txnId, update)
@@ -299,11 +317,12 @@ async function handleManualEntry(
 ): Promise<void> {
   await ctx.replyWithChatAction('typing')
 
-  const extracted = await extractExpenseFields(text)
+  const { amount: preParsedAmount, cleanText } = preParseAmount(text)
+  const extracted = await extractExpenseFields(cleanText)
 
   let data: Record<string, unknown> = {
     manager_id: managerId,
-    amount: extracted.amount,
+    amount: preParsedAmount ?? extracted.amount,
     date: extracted.date,
     account_info: extracted.account_name,
     category_id: extracted.category_id,
@@ -449,6 +468,7 @@ export async function handleEditMenuCallback(ctx: Context, data: string): Promis
     .text('Дата', `edit_date:${txnId}`).text('Сумма', `edit_amount:${txnId}`).row()
     .text('Счет', `edit_account_info:${txnId}`).text('Статья', `edit_category:${txnId}`).row()
     .text('Направление', `edit_direction:${txnId}`).text('Контрагент', `edit_counterparty:${txnId}`).row()
+    .text('Описание', `edit_description:${txnId}`).row()
     .text('« Назад', `back_confirm:${txnId}`)
 
   await ctx.editMessageText('Что исправить?', { reply_markup: keyboard })

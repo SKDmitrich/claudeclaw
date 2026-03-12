@@ -1,4 +1,4 @@
-export type MissingField = 'date' | 'amount' | 'account_info' | 'category' | 'direction' | 'counterparty'
+export type MissingField = 'date' | 'amount' | 'account_info' | 'category' | 'direction' | 'counterparty' | 'description'
 
 export type ConversationState =
   | { type: 'registration_name' }
