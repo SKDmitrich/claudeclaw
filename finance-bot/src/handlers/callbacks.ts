@@ -6,7 +6,7 @@ import {
 import { postTransaction } from '../fintablo.js'
 import { logger } from '../logger.js'
 import { userStates } from '../state.js'
-import { processNextInQueue } from './expense.js'
+import { processNextInQueue, handleFieldPickerCallback } from './expense.js'
 import { adminCallbackHandler } from './admin.js'
 
 export async function callbackHandler(ctx: Context): Promise<void> {
@@ -21,6 +21,8 @@ export async function callbackHandler(ctx: Context): Promise<void> {
     await handleApproveManager(ctx, data)
   } else if (data.startsWith('reject_mgr:')) {
     await handleRejectManager(ctx, data)
+  } else if (data.startsWith('pick_cat:') || data.startsWith('pick_dir:') || data.startsWith('pick_acc:')) {
+    await handleFieldPickerCallback(ctx, data)
   } else if (data.startsWith('confirm_txn:')) {
     await handleConfirmTransaction(ctx, data)
   } else if (data.startsWith('cancel_txn:')) {

@@ -4,12 +4,13 @@ import { userStates, txnQueue, type MissingField } from '../state.js'
 import {
   createManager, getManagerByTelegramId,
   getPendingTransaction, updatePendingTransaction,
-  createPendingTransaction,
+  createPendingTransaction, getAllDirections, getAllCards,
   type PendingTransaction,
 } from '../db.js'
 import { extractExpenseFields } from '../ai.js'
 import { ADMIN_CHAT_ID } from '../config.js'
 import { logger } from '../logger.js'
+import { transcribeVoice } from '../voice.js'
 
 const FIELD_LABELS: Record<MissingField, string> = {
   date: 'Дата (ГГГГ-ММ-ДД)',
@@ -20,10 +21,26 @@ const FIELD_LABELS: Record<MissingField, string> = {
   counterparty: 'Контрагент (кому/от кого)',
 }
 
+// Manager categories (from FinTablo)
+const MANAGER_CATEGORIES = [
+  { id: 1045100, name: 'Самовыкупы' },
+  { id: 1045121, name: 'Фотоконтент' },
+  { id: 1045119, name: 'Расходы на ПО и сервисы' },
+  { id: 1045095, name: 'Логистика не входящая в с/с' },
+]
+
 export async function expenseHandler(ctx: Context): Promise<void> {
   const userId = ctx.from?.id
+  if (!userId) return
+
+  // Handle voice messages
+  if (ctx.message?.voice) {
+    await handleVoiceMessage(ctx, userId)
+    return
+  }
+
   const text = ctx.message?.text
-  if (!userId || !text) return
+  if (!text) return
 
   const state = userStates.get(userId)
 
@@ -46,6 +63,41 @@ export async function expenseHandler(ctx: Context): Promise<void> {
   if (!manager || manager.status !== 'active') return
 
   await handleManualEntry(ctx, userId, text, manager.id)
+}
+
+// ─── Voice ───────────────────────────────────────────────────────────────────
+
+async function handleVoiceMessage(ctx: Context, userId: number): Promise<void> {
+  const manager = getManagerByTelegramId(String(userId))
+  if (!manager || manager.status !== 'active') return
+
+  await ctx.replyWithChatAction('typing')
+
+  try {
+    const file = await ctx.getFile()
+    const url = `https://api.telegram.org/file/bot${ctx.api.token}/${file.file_path}`
+    const text = await transcribeVoice(url)
+
+    if (!text) {
+      await ctx.reply('Не удалось распознать голос. Попробуй ещё раз.')
+      return
+    }
+
+    await ctx.reply(`Распознано: "${text}"`)
+
+    const state = userStates.get(userId)
+
+    if (state?.type === 'awaiting_expense_description') {
+      await handleExpenseDescription(ctx, userId, text, state.txnId)
+    } else if (state?.type === 'filling_missing_field') {
+      await handleFillingField(ctx, userId, text, state.txnId, state.field, state.remaining)
+    } else {
+      await handleManualEntry(ctx, userId, text, manager.id)
+    }
+  } catch (err) {
+    logger.error({ err }, 'Voice processing failed')
+    await ctx.reply('Ошибка обработки голосового сообщения.')
+  }
 }
 
 // ─── Registration ────────────────────────────────────────────────────────────
@@ -127,7 +179,6 @@ async function handleFillingField(
     return
   }
 
-  // Apply the answer to the correct field
   const update: Partial<PendingTransaction> = {}
   switch (field) {
     case 'date':
@@ -146,7 +197,6 @@ async function handleFillingField(
       update.account_info = text.trim()
       break
     case 'category':
-      // Try to match by name or ID
       update.category_name = text.trim()
       break
     case 'direction':
@@ -158,16 +208,39 @@ async function handleFillingField(
   }
 
   updatePendingTransaction(txnId, update)
+  await askNextMissing(ctx, userId, txnId, remaining)
+}
 
-  if (remaining.length > 0) {
-    const nextField = remaining[0]
-    const rest = remaining.slice(1)
-    userStates.set(userId, { type: 'filling_missing_field', txnId, field: nextField, remaining: rest })
-    await ctx.reply(`${FIELD_LABELS[nextField]}:`, { reply_markup: { force_reply: true } })
-  } else {
-    const updated = getPendingTransaction(txnId)!
-    await showConfirmation(ctx, userId, updated)
+// ─── Callback handlers for field pickers ────────────────────────────────────
+
+export async function handleFieldPickerCallback(ctx: Context, data: string): Promise<void> {
+  const userId = ctx.from?.id
+  if (!userId) return
+
+  const state = userStates.get(userId)
+  if (!state || state.type !== 'filling_missing_field') return
+
+  const { txnId, remaining } = state
+
+  if (data.startsWith('pick_cat:')) {
+    const parts = data.replace('pick_cat:', '').split(':')
+    const catId = parseInt(parts[0], 10)
+    const catName = parts.slice(1).join(':')
+    updatePendingTransaction(txnId, { category_id: catId, category_name: catName })
+  } else if (data.startsWith('pick_dir:')) {
+    const parts = data.replace('pick_dir:', '').split(':')
+    const dirId = parseInt(parts[0], 10)
+    const dirName = parts.slice(1).join(':')
+    updatePendingTransaction(txnId, { direction_id: dirId, direction_name: dirName })
+  } else if (data.startsWith('pick_acc:')) {
+    const parts = data.replace('pick_acc:', '').split(':')
+    const accId = parseInt(parts[0], 10)
+    const accName = parts.slice(1).join(':')
+    updatePendingTransaction(txnId, { account_id: accId, account_info: accName })
   }
+
+  await ctx.editMessageText('Выбрано.')
+  await askNextMissing(ctx, userId, txnId, remaining)
 }
 
 // ─── Manual entry ───────────────────────────────────────────────────────────
@@ -201,7 +274,7 @@ async function handleManualEntry(
   await checkAndAskMissing(ctx, userId, updated)
 }
 
-// ─── Validation ─────────────────────────────────────────────────────────────
+// ─── Validation & field asking ──────────────────────────────────────────────
 
 function getMissingFields(txn: PendingTransaction): MissingField[] {
   const missing: MissingField[] = []
@@ -222,7 +295,6 @@ async function checkAndAskMissing(ctx: Context, userId: number, txn: PendingTran
     return
   }
 
-  // Show what we have so far
   const lines = [
     'Заполнено:',
     `  Дата: ${txn.date ?? '---'}`,
@@ -237,11 +309,66 @@ async function checkAndAskMissing(ctx: Context, userId: number, txn: PendingTran
   ]
   await ctx.reply(lines.join('\n'))
 
-  // Ask for the first missing field
-  const firstField = missing[0]
-  const rest = missing.slice(1)
-  userStates.set(userId, { type: 'filling_missing_field', txnId: txn.id, field: firstField, remaining: rest })
-  await ctx.reply(`${FIELD_LABELS[firstField]}:`, { reply_markup: { force_reply: true } })
+  await askForField(ctx, userId, txn.id, missing[0], missing.slice(1))
+}
+
+async function askNextMissing(ctx: Context, userId: number, txnId: number, remaining: MissingField[]): Promise<void> {
+  if (remaining.length > 0) {
+    await askForField(ctx, userId, txnId, remaining[0], remaining.slice(1))
+  } else {
+    const updated = getPendingTransaction(txnId)!
+    const stillMissing = getMissingFields(updated)
+    if (stillMissing.length > 0) {
+      await askForField(ctx, userId, txnId, stillMissing[0], stillMissing.slice(1))
+    } else {
+      await showConfirmation(ctx, userId, updated)
+    }
+  }
+}
+
+async function askForField(
+  ctx: Context,
+  userId: number,
+  txnId: number,
+  field: MissingField,
+  remaining: MissingField[]
+): Promise<void> {
+  userStates.set(userId, { type: 'filling_missing_field', txnId, field, remaining })
+
+  // Fields with button pickers
+  if (field === 'category') {
+    const keyboard = new InlineKeyboard()
+    for (const cat of MANAGER_CATEGORIES) {
+      keyboard.text(cat.name, `pick_cat:${cat.id}:${cat.name}`).row()
+    }
+    await ctx.reply('Выбери статью:', { reply_markup: keyboard })
+    return
+  }
+
+  if (field === 'direction') {
+    const dirs = getAllDirections()
+    const keyboard = new InlineKeyboard()
+    for (const d of dirs) {
+      keyboard.text(d.name, `pick_dir:${d.fintablo_direction_id ?? d.id}:${d.name}`).row()
+    }
+    await ctx.reply('Выбери направление:', { reply_markup: keyboard })
+    return
+  }
+
+  if (field === 'account_info') {
+    const cards = getAllCards()
+    if (cards.length > 0) {
+      const keyboard = new InlineKeyboard()
+      for (const c of cards) {
+        keyboard.text(c.fintablo_account_name, `pick_acc:${c.fintablo_account_id}:${c.fintablo_account_name}`).row()
+      }
+      await ctx.reply('Выбери счет/карту:', { reply_markup: keyboard })
+      return
+    }
+  }
+
+  // Text input for other fields
+  await ctx.reply(`${FIELD_LABELS[field]}:`, { reply_markup: { force_reply: true } })
 }
 
 async function showConfirmation(ctx: Context, userId: number, txn: PendingTransaction): Promise<void> {

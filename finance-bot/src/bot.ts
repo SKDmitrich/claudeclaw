@@ -21,8 +21,9 @@ export function createBot(): Bot {
   // Callbacks
   bot.on('callback_query:data', callbackHandler)
 
-  // Text messages
+  // Text and voice messages
   bot.on('message:text', expenseHandler)
+  bot.on('message:voice', expenseHandler)
 
   bot.catch(err => {
     logger.error({ err: err.error }, 'Bot error')
