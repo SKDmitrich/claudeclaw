@@ -2,7 +2,7 @@ import { Bot } from 'grammy'
 import { FINANCE_BOT_TOKEN } from './config.js'
 import { logger } from './logger.js'
 import { startHandler } from './handlers/start.js'
-import { adminMenuHandler, linkcardHandler } from './handlers/admin.js'
+import { adminMenuHandler } from './handlers/admin.js'
 import { callbackHandler } from './handlers/callbacks.js'
 import { expenseHandler } from './handlers/expense.js'
 
@@ -17,7 +17,6 @@ export function createBot(): Bot {
   // Commands
   bot.command('start', startHandler)
   bot.command('admin', adminMenuHandler)
-  bot.command('linkcard', linkcardHandler)
 
   // Callbacks
   bot.on('callback_query:data', callbackHandler)

@@ -28,11 +28,11 @@ export interface Manager {
 
 export interface Card {
   id: number
-  card_mask: string
-  zenmoney_account_id: string
-  manager_id: number
-  direction_id: number
-  label: string | null
+  fintablo_account_id: number
+  fintablo_account_name: string
+  zenmoney_account_id: string | null
+  manager_id: number | null
+  direction_id: number | null
   created_at: number
 }
 
@@ -91,11 +91,11 @@ export function initDatabase(): void {
   d.exec(`
     CREATE TABLE IF NOT EXISTS cards (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      card_mask TEXT NOT NULL,
-      zenmoney_account_id TEXT NOT NULL,
+      fintablo_account_id INTEGER NOT NULL UNIQUE,
+      fintablo_account_name TEXT NOT NULL,
+      zenmoney_account_id TEXT,
       manager_id INTEGER REFERENCES managers(id),
       direction_id INTEGER REFERENCES directions(id),
-      label TEXT,
       created_at INTEGER NOT NULL
     )
   `)
@@ -137,9 +137,11 @@ export function initDatabase(): void {
 export function seedDirections(): void {
   const d = getDb()
   const insert = d.prepare('INSERT OR IGNORE INTO directions (id, name, fintablo_direction_id) VALUES (?, ?, ?)')
-  insert.run(1, 'WB (Кузнецов С.Д.)', null)
-  insert.run(2, 'WB (Кузнецова Н.Л.)', null)
-  insert.run(3, 'WB (Унжакова В.С.)', null)
+  insert.run(1, 'WB (Кузнецов С.Д.)', 98224)
+  insert.run(2, 'WB (Кузнецова Н.Л.)', 99106)
+  insert.run(3, 'WB (Унжакова В.С.)', 99103)
+  insert.run(4, 'OZON (Унжакова В.С.)', 99105)
+  insert.run(5, 'OZON (Кузнецов С.Д.)', 99857)
 }
 
 // ─── Managers ────────────────────────────────────────────────────────────────
@@ -183,33 +185,57 @@ export function getCardByZenmoneyAccount(accountId: string): Card | undefined {
     .get(accountId) as Card | undefined
 }
 
-export function getCardsByManagerId(managerId: number): Card[] {
+export function getCardByFintabloId(fintabloAccountId: number): Card | undefined {
   return getDb()
-    .prepare('SELECT * FROM cards WHERE manager_id = ?')
-    .all(managerId) as Card[]
+    .prepare('SELECT * FROM cards WHERE fintablo_account_id = ?')
+    .get(fintabloAccountId) as Card | undefined
 }
 
-export function getAllCards(): Card[] {
+export function getAllCards(): Array<Card & { manager_name?: string; direction_name?: string }> {
   return getDb().prepare(`
     SELECT c.*, m.name as manager_name, d.name as direction_name
     FROM cards c
     LEFT JOIN managers m ON c.manager_id = m.id
     LEFT JOIN directions d ON c.direction_id = d.id
-    ORDER BY c.created_at DESC
-  `).all() as Card[]
+    ORDER BY c.fintablo_account_name
+  `).all() as Array<Card & { manager_name?: string; direction_name?: string }>
 }
 
-export function createCard(
-  cardMask: string,
-  zenmoneyAccountId: string,
-  managerId: number,
-  directionId: number,
-  label: string | null
-): number {
-  const result = getDb()
-    .prepare('INSERT INTO cards (card_mask, zenmoney_account_id, manager_id, direction_id, label, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(cardMask, zenmoneyAccountId, managerId, directionId, label, Date.now())
-  return result.lastInsertRowid as number
+export function upsertCard(
+  fintabloAccountId: number,
+  fintabloAccountName: string,
+): void {
+  getDb()
+    .prepare(`
+      INSERT INTO cards (fintablo_account_id, fintablo_account_name, created_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(fintablo_account_id) DO UPDATE SET fintablo_account_name = excluded.fintablo_account_name
+    `)
+    .run(fintabloAccountId, fintabloAccountName, Date.now())
+}
+
+export function linkCardToManager(fintabloAccountId: number, managerId: number): void {
+  getDb()
+    .prepare('UPDATE cards SET manager_id = ? WHERE fintablo_account_id = ?')
+    .run(managerId, fintabloAccountId)
+}
+
+export function linkCardToDirection(fintabloAccountId: number, directionId: number): void {
+  getDb()
+    .prepare('UPDATE cards SET direction_id = ? WHERE fintablo_account_id = ?')
+    .run(directionId, fintabloAccountId)
+}
+
+export function linkCardToZenmoney(fintabloAccountId: number, zenmoneyAccountId: string): void {
+  getDb()
+    .prepare('UPDATE cards SET zenmoney_account_id = ? WHERE fintablo_account_id = ?')
+    .run(zenmoneyAccountId, fintabloAccountId)
+}
+
+export function unlinkCardManager(fintabloAccountId: number): void {
+  getDb()
+    .prepare('UPDATE cards SET manager_id = NULL WHERE fintablo_account_id = ?')
+    .run(fintabloAccountId)
 }
 
 export function deleteCard(id: number): void {

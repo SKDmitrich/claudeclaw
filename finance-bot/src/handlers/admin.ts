@@ -3,11 +3,12 @@ import { InlineKeyboard } from 'grammy'
 import { isAdmin } from './start.js'
 import {
   getAllManagers, getAllCards, getAllDirections,
-  createCard, deleteCard, getManagerByTelegramId,
+  upsertCard, linkCardToManager, linkCardToDirection, unlinkCardManager,
   getUnsentConfirmedTransactions, updatePendingTransaction,
+  getActiveManagers,
 } from '../db.js'
-import { postTransaction } from '../fintablo.js'
-import { userStates } from '../state.js'
+import { getAccounts, postTransaction, type FinTabloAccount } from '../fintablo.js'
+import { logger } from '../logger.js'
 
 function adminOnly(ctx: Context): boolean {
   const chatId = ctx.chat?.id
@@ -18,18 +19,23 @@ function adminOnly(ctx: Context): boolean {
   return true
 }
 
+// ─── Sync accounts from FinTablo ─────────────────────────────────────────────
+
+export async function syncAccountsFromFintablo(): Promise<number> {
+  const accounts = await getAccounts(true)
+  // Only Т-Банк Совм cards
+  const tCards = accounts.filter(a => a.name.includes('Т-Банк Совм'))
+  for (const acc of tCards) {
+    upsertCard(acc.id, acc.name)
+  }
+  return tCards.length
+}
+
 // ─── Main admin menu ─────────────────────────────────────────────────────────
 
 export async function adminMenuHandler(ctx: Context): Promise<void> {
   if (!adminOnly(ctx)) return
-
-  const keyboard = new InlineKeyboard()
-    .text('Менеджеры', 'admin:managers').text('Карты', 'admin:cards').row()
-    .text('Направления', 'admin:directions').text('Привязать карту', 'admin:linkcard').row()
-    .text('Отвязать карту', 'admin:unlinkcard').text('Retry отправку', 'admin:retry').row()
-    .text('Закрыть', 'admin:close')
-
-  await ctx.reply('Управление:', { reply_markup: keyboard })
+  await showMainMenu(ctx, false)
 }
 
 // ─── Admin callback router ───────────────────────────────────────────────────
@@ -37,7 +43,8 @@ export async function adminMenuHandler(ctx: Context): Promise<void> {
 export async function adminCallbackHandler(ctx: Context, data: string): Promise<void> {
   if (!ctx.from?.id || !isAdmin(ctx.from.id)) return
 
-  const action = data.replace('admin:', '')
+  const parts = data.replace('admin:', '').split(':')
+  const action = parts[0]
 
   switch (action) {
     case 'managers':
@@ -49,17 +56,35 @@ export async function adminCallbackHandler(ctx: Context, data: string): Promise<
     case 'directions':
       await showDirections(ctx)
       break
-    case 'linkcard':
-      await promptLinkCard(ctx)
+    case 'sync':
+      await handleSync(ctx)
       break
-    case 'unlinkcard':
-      await promptUnlinkCard(ctx)
+    case 'assign_mgr':
+      // admin:assign_mgr:fintabloAccountId
+      await showManagerPicker(ctx, parseInt(parts[1], 10))
+      break
+    case 'set_mgr':
+      // admin:set_mgr:fintabloAccountId:managerId
+      await handleSetManager(ctx, parseInt(parts[1], 10), parseInt(parts[2], 10))
+      break
+    case 'assign_dir':
+      // admin:assign_dir:fintabloAccountId
+      await showDirectionPicker(ctx, parseInt(parts[1], 10))
+      break
+    case 'set_dir':
+      // admin:set_dir:fintabloAccountId:directionId
+      await handleSetDirection(ctx, parseInt(parts[1], 10), parseInt(parts[2], 10))
+      break
+    case 'unlink':
+      // admin:unlink:fintabloAccountId
+      unlinkCardManager(parseInt(parts[1], 10))
+      await showCards(ctx)
       break
     case 'retry':
       await retryUnsent(ctx)
       break
     case 'back':
-      await showMainMenu(ctx)
+      await showMainMenu(ctx, true)
       break
     case 'close':
       await ctx.editMessageText('Меню закрыто.')
@@ -69,14 +94,17 @@ export async function adminCallbackHandler(ctx: Context, data: string): Promise<
 
 // ─── Menu screens ────────────────────────────────────────────────────────────
 
-async function showMainMenu(ctx: Context): Promise<void> {
+async function showMainMenu(ctx: Context, edit: boolean): Promise<void> {
   const keyboard = new InlineKeyboard()
-    .text('Менеджеры', 'admin:managers').text('Карты', 'admin:cards').row()
-    .text('Направления', 'admin:directions').text('Привязать карту', 'admin:linkcard').row()
-    .text('Отвязать карту', 'admin:unlinkcard').text('Retry отправку', 'admin:retry').row()
-    .text('Закрыть', 'admin:close')
+    .text('Счета/Карты', 'admin:cards').text('Менеджеры', 'admin:managers').row()
+    .text('Направления', 'admin:directions').text('Синхр. ФинТабло', 'admin:sync').row()
+    .text('Retry отправку', 'admin:retry').text('Закрыть', 'admin:close')
 
-  await ctx.editMessageText('Управление:', { reply_markup: keyboard })
+  if (edit) {
+    await ctx.editMessageText('Управление:', { reply_markup: keyboard })
+  } else {
+    await ctx.reply('Управление:', { reply_markup: keyboard })
+  }
 }
 
 async function showManagers(ctx: Context): Promise<void> {
@@ -89,7 +117,7 @@ async function showManagers(ctx: Context): Promise<void> {
   }
 
   const lines = managers.map((m, i) =>
-    `${i + 1}. ${m.name} (@${m.telegram_username ?? '?'}, ID: ${m.telegram_id}) - ${m.status}`
+    `${i + 1}. ${m.name} (@${m.telegram_username ?? '?'}) - ${m.status}`
   )
 
   await ctx.editMessageText(`Менеджеры:\n\n${lines.join('\n')}`, { reply_markup: back })
@@ -97,53 +125,91 @@ async function showManagers(ctx: Context): Promise<void> {
 
 async function showCards(ctx: Context): Promise<void> {
   const cards = getAllCards()
-  const back = new InlineKeyboard().text('« Назад', 'admin:back')
+  const back = new InlineKeyboard()
 
   if (cards.length === 0) {
-    await ctx.editMessageText('Карт нет. Привяжи через кнопку "Привязать карту".', { reply_markup: back })
+    back.text('Синхр. ФинТабло', 'admin:sync').row()
+    back.text('« Назад', 'admin:back')
+    await ctx.editMessageText('Счетов нет. Нажми "Синхр. ФинТабло" чтобы загрузить.', { reply_markup: back })
     return
   }
 
-  const lines = cards.map((c, i) => {
-    const r = c as unknown as Record<string, unknown>
-    return `${i + 1}. [${r.id}] ${r.card_mask} → ${r.manager_name ?? '?'} / ${r.direction_name ?? '?'} ${r.label ? `(${r.label})` : ''}`
+  const lines = cards.map(c => {
+    const mgr = c.manager_name ?? 'не привязан'
+    const dir = c.direction_name ?? 'нет'
+    return `${c.fintablo_account_name}\n  Менеджер: ${mgr} | Направление: ${dir}`
   })
 
-  await ctx.editMessageText(`Карты:\n\n${lines.join('\n')}`, { reply_markup: back })
+  // Buttons for each card: assign manager, assign direction
+  const keyboard = new InlineKeyboard()
+  for (const c of cards) {
+    const label = c.fintablo_account_name.replace('Т-Банк Совм ', '').slice(0, 20)
+    keyboard
+      .text(`${label} → Менеджер`, `admin:assign_mgr:${c.fintablo_account_id}`)
+      .text(`→ Направление`, `admin:assign_dir:${c.fintablo_account_id}`)
+      .row()
+  }
+  keyboard.text('Синхр. ФинТабло', 'admin:sync').row()
+  keyboard.text('« Назад', 'admin:back')
+
+  await ctx.editMessageText(`Счета:\n\n${lines.join('\n\n')}`, { reply_markup: keyboard })
 }
 
 async function showDirections(ctx: Context): Promise<void> {
   const dirs = getAllDirections()
   const back = new InlineKeyboard().text('« Назад', 'admin:back')
-  const lines = dirs.map(d => `${d.id}. ${d.name} (FinTablo: ${d.fintablo_direction_id ?? 'не привязан'})`)
+  const lines = dirs.map(d => `${d.id}. ${d.name} (ФинТабло: ${d.fintablo_direction_id ?? '-'})`)
   await ctx.editMessageText(`Направления:\n\n${lines.join('\n')}`, { reply_markup: back })
 }
 
-async function promptLinkCard(ctx: Context): Promise<void> {
-  const back = new InlineKeyboard().text('« Назад', 'admin:back')
-  await ctx.editMessageText(
-    'Отправь сообщение в формате:\n\n/linkcard <маска> <zen_account_id> <tg_id> <direction_id> [метка]\n\nПример:\n/linkcard ****1234 abc-123 482728189 1 Т-Банк Совм',
-    { reply_markup: back }
-  )
+// ─── Pickers ─────────────────────────────────────────────────────────────────
+
+async function showManagerPicker(ctx: Context, fintabloAccountId: number): Promise<void> {
+  const managers = getActiveManagers()
+  const keyboard = new InlineKeyboard()
+
+  for (const m of managers) {
+    keyboard.text(m.name, `admin:set_mgr:${fintabloAccountId}:${m.id}`).row()
+  }
+  keyboard.text('Отвязать', `admin:unlink:${fintabloAccountId}`).row()
+  keyboard.text('« К счетам', 'admin:cards')
+
+  await ctx.editMessageText(`Выбери менеджера для счета:`, { reply_markup: keyboard })
 }
 
-async function promptUnlinkCard(ctx: Context): Promise<void> {
-  const cards = getAllCards()
-  if (cards.length === 0) {
-    const back = new InlineKeyboard().text('« Назад', 'admin:back')
-    await ctx.editMessageText('Нет привязанных карт.', { reply_markup: back })
-    return
-  }
-
-  // Show cards as buttons for easy unlinking
+async function showDirectionPicker(ctx: Context, fintabloAccountId: number): Promise<void> {
+  const dirs = getAllDirections()
   const keyboard = new InlineKeyboard()
-  for (const c of cards) {
-    const r = c as unknown as Record<string, unknown>
-    keyboard.text(`${r.card_mask} (${r.manager_name ?? '?'})`, `admin:unlinkcard:${r.id}`).row()
-  }
-  keyboard.text('« Назад', 'admin:back')
 
-  await ctx.editMessageText('Выбери карту для отвязки:', { reply_markup: keyboard })
+  for (const d of dirs) {
+    keyboard.text(d.name, `admin:set_dir:${fintabloAccountId}:${d.id}`).row()
+  }
+  keyboard.text('« К счетам', 'admin:cards')
+
+  await ctx.editMessageText(`Выбери направление:`, { reply_markup: keyboard })
+}
+
+// ─── Actions ─────────────────────────────────────────────────────────────────
+
+async function handleSync(ctx: Context): Promise<void> {
+  try {
+    const count = await syncAccountsFromFintablo()
+    await showCards(ctx)
+  } catch (err) {
+    logger.error({ err }, 'Failed to sync from FinTablo')
+    const back = new InlineKeyboard().text('« Назад', 'admin:back')
+    await ctx.editMessageText('Ошибка синхронизации с ФинТабло.', { reply_markup: back })
+  }
+}
+
+async function handleSetManager(ctx: Context, fintabloAccountId: number, managerId: number): Promise<void> {
+  linkCardToManager(fintabloAccountId, managerId)
+  await showCards(ctx)
+}
+
+async function handleSetDirection(ctx: Context, fintabloAccountId: number, directionId: number): Promise<void> {
+  linkCardToDirection(fintabloAccountId, directionId)
+  await showCards(ctx)
 }
 
 async function retryUnsent(ctx: Context): Promise<void> {
@@ -176,36 +242,4 @@ async function retryUnsent(ctx: Context): Promise<void> {
   }
 
   await ctx.editMessageText(`Retry: отправлено ${sent}, ошибок ${failed}`, { reply_markup: back })
-}
-
-// ─── Text command handlers (still needed for /linkcard) ──────────────────────
-
-export async function linkcardHandler(ctx: Context): Promise<void> {
-  if (!adminOnly(ctx)) return
-  const text = ctx.message?.text ?? ''
-  const parts = text.split(/\s+/).slice(1)
-
-  if (parts.length < 4) {
-    await ctx.reply('Формат: /linkcard <маска_карты> <zen_account_id> <tg_id_менеджера> <direction_id> [метка]')
-    return
-  }
-
-  const [cardMask, zenAccountId, tgId, dirIdStr, ...labelParts] = parts
-  const dirId = parseInt(dirIdStr, 10)
-  const label = labelParts.length > 0 ? labelParts.join(' ') : null
-
-  const manager = getManagerByTelegramId(tgId)
-  if (!manager || manager.status !== 'active') {
-    await ctx.reply(`Менеджер с TG ID ${tgId} не найден или неактивен.`)
-    return
-  }
-
-  const dirs = getAllDirections()
-  if (!dirs.find(d => d.id === dirId)) {
-    await ctx.reply(`Направление ${dirId} не найдено. /directions`)
-    return
-  }
-
-  const id = createCard(cardMask, zenAccountId, manager.id, dirId, label)
-  await ctx.reply(`Карта привязана (ID: ${id}). ${cardMask} → ${manager.name} / направление ${dirId}`)
 }

@@ -13,18 +13,29 @@ export interface FinTabloTransactionPayload {
   currency?: string
 }
 
-interface FinTabloCategory {
+export interface FinTabloCategory {
   id: number
   name: string
   type: string
 }
 
-interface FinTabloDirection {
+export interface FinTabloDirection {
   id: number
   name: string
 }
 
-interface FinTabloAccount {
+export interface FinTabloAccount {
+  id: number
+  name: string
+  type: string
+  groupId: number
+  number: string
+  currency: string
+  balance: number
+  archived: number
+}
+
+export interface FinTabloGroup {
   id: number
   name: string
 }
@@ -32,6 +43,7 @@ interface FinTabloAccount {
 let categoriesCache: FinTabloCategory[] | null = null
 let directionsCache: FinTabloDirection[] | null = null
 let accountsCache: FinTabloAccount[] | null = null
+let groupsCache: FinTabloGroup[] | null = null
 
 async function apiRequest(method: string, path: string, body?: unknown): Promise<unknown> {
   const url = `${FINTABLO_API_URL}${path}`
@@ -63,21 +75,28 @@ export async function postTransaction(data: FinTabloTransactionPayload): Promise
 
 export async function getCategories(forceRefresh = false): Promise<FinTabloCategory[]> {
   if (categoriesCache && !forceRefresh) return categoriesCache
-  const result = await apiRequest('GET', '/v1/category') as FinTabloCategory[]
-  categoriesCache = result
-  return result
+  const result = await apiRequest('GET', '/v1/category') as { items: FinTabloCategory[] }
+  categoriesCache = result.items
+  return result.items
 }
 
 export async function getDirections(forceRefresh = false): Promise<FinTabloDirection[]> {
   if (directionsCache && !forceRefresh) return directionsCache
-  const result = await apiRequest('GET', '/v1/direction') as FinTabloDirection[]
-  directionsCache = result
-  return result
+  const result = await apiRequest('GET', '/v1/direction') as { items: FinTabloDirection[] }
+  directionsCache = result.items
+  return result.items
 }
 
 export async function getAccounts(forceRefresh = false): Promise<FinTabloAccount[]> {
   if (accountsCache && !forceRefresh) return accountsCache
-  const result = await apiRequest('GET', '/v1/moneybag') as FinTabloAccount[]
-  accountsCache = result
-  return result
+  const result = await apiRequest('GET', '/v1/moneybag') as { items: FinTabloAccount[] }
+  accountsCache = result.items.filter(a => !a.archived)
+  return accountsCache
+}
+
+export async function getGroups(forceRefresh = false): Promise<FinTabloGroup[]> {
+  if (groupsCache && !forceRefresh) return groupsCache
+  const result = await apiRequest('GET', '/v1/moneybag-group') as { items: FinTabloGroup[] }
+  groupsCache = result.items
+  return result.items
 }

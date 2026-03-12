@@ -1,4 +1,5 @@
-import { initDatabase, seedDirections, getCardByZenmoneyAccount, getManagerById, createPendingTransaction, getPendingTransactionByZenmoneyId } from './db.js'
+import { initDatabase, seedDirections, getCardByZenmoneyAccount, getCardByFintabloId, getManagerById, createPendingTransaction, getPendingTransactionByZenmoneyId } from './db.js'
+import { syncAccountsFromFintablo } from './handlers/admin.js'
 import { createBot } from './bot.js'
 import { startPolling, stopPolling, type ZenMoneyTransaction } from './zenmoney.js'
 import { notifyManagerAboutTransaction } from './handlers/expense.js'
@@ -15,6 +16,14 @@ async function main() {
   initDatabase()
   seedDirections()
   logger.info('Database initialized')
+
+  // Sync accounts from FinTablo
+  try {
+    const count = await syncAccountsFromFintablo()
+    logger.info({ count }, 'Synced accounts from FinTablo')
+  } catch (err) {
+    logger.error({ err }, 'Failed to sync accounts from FinTablo on startup')
+  }
 
   // Create bot
   const bot = createBot()
@@ -33,13 +42,17 @@ async function main() {
     }
 
     // Find manager
+    if (!card.manager_id) {
+      logger.debug({ txnId: txn.id, account: txn.outcomeAccount }, 'Card has no manager linked, skipping')
+      return
+    }
     const manager = getManagerById(card.manager_id)
     if (!manager || manager.status !== 'active') {
       logger.warn({ txnId: txn.id, managerId: card.manager_id }, 'Manager not active, skipping')
       return
     }
 
-    const accountInfo = card.label ?? card.card_mask
+    const accountInfo = card.fintablo_account_name
 
     // Create pending transaction
     const txnId = createPendingTransaction({
