@@ -67,11 +67,11 @@ async function apiRequest(method: string, path: string, body?: unknown): Promise
 }
 
 export async function postTransaction(data: FinTabloTransactionPayload): Promise<string> {
-  // Convert date from YYYY-MM-DD to DD.MM.YYYY
+  // Convert date from YYYY-MM-DD to DD.MM.YYYY HH:mm
   const [y, m, d] = data.date.split('-')
   const payload = {
     ...data,
-    date: `${d}.${m}.${y}`,
+    date: `${d}.${m}.${y} 12:00`,
   }
   logger.info({ payload }, 'Sending to FinTablo')
   const result = await apiRequest('POST', '/v1/transaction', payload) as { id: number }
