@@ -1,4 +1,4 @@
-import { initDatabase, seedDirections, getCardByZenmoneyAccount, getCardByFintabloId, getManagerById, createPendingTransaction, getPendingTransactionByZenmoneyId, getAllCards, linkCardToZenmoney, getAllDirections } from './db.js'
+import { initDatabase, seedDirections, getCardByZenmoneyAccount, getCardByFintabloId, getManagerById, createPendingTransaction, getPendingTransactionByZenmoneyId, getAllCards, linkCardToZenmoney, getAllDirections, getActiveManagers, getPendingByManagerId } from './db.js'
 import { syncAccountsFromFintablo } from './handlers/admin.js'
 import { createBot } from './bot.js'
 import { startPolling, stopPolling, type ZenMoneyTransaction } from './zenmoney.js'
@@ -113,6 +113,49 @@ async function main() {
 
   startPolling(handleNewTransaction, handleAuthError, handleAccountsSync)
   logger.info('ZenMoney polling started')
+
+  // Daily reminder at 10:00 Moscow time for unprocessed transactions
+  const startDailyReminder = () => {
+    const checkAndRemind = async () => {
+      const managers = getActiveManagers()
+      for (const mgr of managers) {
+        const pending = getPendingByManagerId(mgr.id)
+        if (pending.length === 0) continue
+
+        const word = pending.length === 1 ? 'операция' : pending.length < 5 ? 'операции' : 'операций'
+        try {
+          await bot.api.sendMessage(
+            mgr.telegram_id,
+            `У тебя не разнесено ${pending.length} ${word}. Пожалуйста заполни необходимые поля и подтверди операции.`
+          )
+          logger.info({ manager: mgr.name, count: pending.length }, 'Sent daily reminder')
+        } catch (err) {
+          logger.error({ err, manager: mgr.name }, 'Failed to send daily reminder')
+        }
+      }
+    }
+
+    const scheduleNext = () => {
+      const now = new Date()
+      const msk = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }))
+      const target = new Date(msk)
+      target.setHours(10, 0, 0, 0)
+      if (msk >= target) target.setDate(target.getDate() + 1)
+
+      const mskOffset = msk.getTime() - now.getTime()
+      const delay = target.getTime() - msk.getTime()
+
+      logger.info({ nextReminder: target.toISOString(), delayMs: delay }, 'Scheduled daily reminder')
+      setTimeout(async () => {
+        await checkAndRemind()
+        scheduleNext()
+      }, delay)
+    }
+
+    scheduleNext()
+  }
+
+  startDailyReminder()
 
   // Graceful shutdown
   const shutdown = () => {
