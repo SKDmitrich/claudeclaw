@@ -2,11 +2,13 @@ import type { Context } from 'grammy'
 import {
   setManagerStatus, getManagerById,
   getPendingTransaction, updatePendingTransaction,
+  deleteCard,
 } from '../db.js'
 import { postTransaction } from '../fintablo.js'
 import { logger } from '../logger.js'
 import { userStates } from '../state.js'
 import { processNextInQueue } from './expense.js'
+import { adminCallbackHandler } from './admin.js'
 
 export async function callbackHandler(ctx: Context): Promise<void> {
   const data = ctx.callbackQuery?.data
@@ -14,7 +16,16 @@ export async function callbackHandler(ctx: Context): Promise<void> {
 
   await ctx.answerCallbackQuery()
 
-  if (data.startsWith('approve_mgr:')) {
+  if (data.startsWith('admin:')) {
+    // Handle unlinkcard with ID: admin:unlinkcard:123
+    if (data.startsWith('admin:unlinkcard:')) {
+      const cardId = parseInt(data.split(':')[2], 10)
+      deleteCard(cardId)
+      await ctx.editMessageText(`Карта ${cardId} отвязана.`)
+      return
+    }
+    await adminCallbackHandler(ctx, data)
+  } else if (data.startsWith('approve_mgr:')) {
     await handleApproveManager(ctx, data)
   } else if (data.startsWith('reject_mgr:')) {
     await handleRejectManager(ctx, data)
@@ -112,5 +123,3 @@ async function handleCancelTransaction(ctx: Context, data: string): Promise<void
   }
 }
 
-// Re-export for use in callbacks
-import { getManagerById as _getManagerById } from '../db.js'
