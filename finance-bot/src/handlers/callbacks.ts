@@ -64,10 +64,11 @@ async function handleConfirmTransaction(ctx: Context, data: string): Promise<voi
 
   try {
     const fintabloId = await postTransaction({
-      date: txn.date,
-      amount: Math.abs(txn.amount) * -1,
+      date: txn.date!,
+      amount: Math.abs(txn.amount!) * -1,
       category_id: txn.category_id ?? undefined,
       direction_id: txn.direction_id ?? undefined,
+      counterparty_name: txn.counterparty_name ?? undefined,
       description: txn.description ?? undefined,
       currency: 'RUB',
     })

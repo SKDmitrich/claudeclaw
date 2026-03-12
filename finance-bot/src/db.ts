@@ -46,13 +46,17 @@ export interface PendingTransaction {
   id: number
   zenmoney_txn_id: string | null
   manager_id: number | null
-  amount: number
-  date: string
+  amount: number | null
+  date: string | null
   account_info: string | null
+  account_id: number | null
   status: 'pending' | 'enriched' | 'confirmed' | 'sent' | 'failed'
   category_id: number | null
   category_name: string | null
   direction_id: number | null
+  direction_name: string | null
+  counterparty_id: number | null
+  counterparty_name: string | null
   description: string | null
   fintablo_txn_id: string | null
   bot_message_id: number | null
@@ -101,13 +105,17 @@ export function initDatabase(): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       zenmoney_txn_id TEXT UNIQUE,
       manager_id INTEGER REFERENCES managers(id),
-      amount REAL NOT NULL,
-      date TEXT NOT NULL,
+      amount REAL,
+      date TEXT,
       account_info TEXT,
+      account_id INTEGER,
       status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','enriched','confirmed','sent','failed')),
       category_id INTEGER,
       category_name TEXT,
       direction_id INTEGER,
+      direction_name TEXT,
+      counterparty_id INTEGER,
+      counterparty_name TEXT,
       description TEXT,
       fintablo_txn_id TEXT,
       bot_message_id INTEGER,
@@ -219,30 +227,40 @@ export function getAllDirections(): Direction[] {
 export function createPendingTransaction(data: {
   zenmoney_txn_id?: string | null
   manager_id?: number | null
-  amount: number
-  date: string
+  amount?: number | null
+  date?: string | null
   account_info?: string | null
+  account_id?: number | null
   category_id?: number | null
   category_name?: string | null
   direction_id?: number | null
+  direction_name?: string | null
+  counterparty_id?: number | null
+  counterparty_name?: string | null
   description?: string | null
 }): number {
   const now = Date.now()
   const result = getDb()
     .prepare(`
       INSERT INTO pending_transactions
-        (zenmoney_txn_id, manager_id, amount, date, account_info, status, category_id, category_name, direction_id, description, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)
+        (zenmoney_txn_id, manager_id, amount, date, account_info, account_id, status,
+         category_id, category_name, direction_id, direction_name,
+         counterparty_id, counterparty_name, description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .run(
       data.zenmoney_txn_id ?? null,
       data.manager_id ?? null,
-      data.amount,
-      data.date,
+      data.amount ?? null,
+      data.date ?? null,
       data.account_info ?? null,
+      data.account_id ?? null,
       data.category_id ?? null,
       data.category_name ?? null,
       data.direction_id ?? null,
+      data.direction_name ?? null,
+      data.counterparty_id ?? null,
+      data.counterparty_name ?? null,
       data.description ?? null,
       now, now
     )
@@ -262,7 +280,12 @@ export function getPendingTransactionByZenmoneyId(txnId: string): PendingTransac
 }
 
 export function updatePendingTransaction(id: number, fields: Partial<PendingTransaction>): void {
-  const allowed = ['status', 'category_id', 'category_name', 'direction_id', 'description', 'fintablo_txn_id', 'bot_message_id', 'manager_id'] as const
+  const allowed = [
+    'status', 'amount', 'date', 'account_info', 'account_id',
+    'category_id', 'category_name', 'direction_id', 'direction_name',
+    'counterparty_id', 'counterparty_name', 'description',
+    'fintablo_txn_id', 'bot_message_id', 'manager_id',
+  ] as const
   const sets: string[] = []
   const values: unknown[] = []
 

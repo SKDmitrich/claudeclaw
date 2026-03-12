@@ -6,6 +6,7 @@ export interface FinTabloTransactionPayload {
   amount: number
   account_id?: number
   counterparty_id?: number
+  counterparty_name?: string
   category_id?: number
   direction_id?: number
   description?: string
