@@ -1,8 +1,10 @@
 import type { Context } from 'grammy'
+import { InlineKeyboard } from 'grammy'
 import {
   setManagerStatus, getManagerById,
   getPendingTransaction, updatePendingTransaction,
 } from '../db.js'
+import { ADMIN_CHAT_ID } from '../config.js'
 import { postTransaction, findOrCreatePartner } from '../fintablo.js'
 import { logger } from '../logger.js'
 import { userStates } from '../state.js'
@@ -109,9 +111,27 @@ async function handleConfirmTransaction(ctx: Context, data: string): Promise<voi
   } catch (err) {
     logger.error({ err, txnId }, 'Failed to send to FinTablo')
     updatePendingTransaction(txnId, { status: 'failed' })
+
+    const retryKeyboard = new InlineKeyboard()
+      .text('Повторить', `confirm_txn:${txnId}`)
+      .text('Отменить', `cancel_txn:${txnId}`)
+
     await ctx.editMessageText(
-      `Ошибка отправки в ФинТабло. Попробуй /retry\n${txn.date} | ${txn.amount}₽ | ${txn.description ?? ''}`
+      `Ошибка отправки в ФинТабло\n${txn.date} | ${txn.amount}₽ | ${txn.description ?? ''}`,
+      { reply_markup: retryKeyboard }
     )
+
+    // Notify admin about the error
+    const errMsg = err instanceof Error ? err.message : String(err)
+    try {
+      await ctx.api.sendMessage(
+        ADMIN_CHAT_ID,
+        `Ошибка отправки в ФинТабло\n\n` +
+        `Менеджер: ${txn.manager_id ? getManagerById(txn.manager_id)?.name ?? '?' : 'admin'}\n` +
+        `Операция: ${txn.date} | ${txn.amount}₽ | ${txn.category_name ?? '?'}\n` +
+        `Ошибка: ${errMsg.slice(0, 200)}`
+      )
+    } catch { /* ignore */ }
   }
 
   // Process next queued transaction for this manager
