@@ -96,7 +96,7 @@ function preParseAmount(text: string): { amount: number | undefined; cleanText: 
 // Manager categories (from FinTablo) -- short names for callback_data
 const MANAGER_CATEGORIES = [
   { id: 1045100, name: 'Самовыкупы' },
-  { id: 1045121, name: 'Фотоконтент' },
+  { id: 1053173, name: 'Фотоконтент' },
   { id: 1045119, name: 'ПО и сервисы' },
   { id: 1045095, name: 'Логистика' },
   { id: 1342729, name: 'Брак' },
