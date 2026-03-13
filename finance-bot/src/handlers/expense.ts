@@ -80,8 +80,19 @@ const FIELD_LABELS: Record<MissingField, string> = {
   description: 'Описание',
 }
 
-// Pre-parse obvious amount from text like "500 руб", "1200₽", "300 р"
+// Pre-parse obvious amount from text like "500 руб", "1200₽", "300 р", "1 млн", "500 тыс"
 function preParseAmount(text: string): { amount: number | undefined; cleanText: string } {
+  // "1 млн рублей", "1.5 млн", "500 тыс руб"
+  const bigMatch = text.match(/(\d+(?:[.,]\d+)?)\s*(млн|тыс)(?:\s*(?:руб\.?|рублей|₽|р\.?\b))?/i)
+  if (bigMatch) {
+    const num = parseFloat(bigMatch[1].replace(',', '.'))
+    const multiplier = bigMatch[2].toLowerCase().startsWith('млн') ? 1_000_000 : 1_000
+    if (!isNaN(num)) {
+      const cleanText = text.replace(bigMatch[0], '').trim()
+      return { amount: num * multiplier, cleanText: cleanText || text }
+    }
+  }
+
   const match = text.match(/(\d[\d\s]*(?:[.,]\d+)?)\s*(?:руб\.?|рублей|₽|р\.?\b)/i)
   if (match) {
     const num = parseFloat(match[1].replace(/\s/g, '').replace(',', '.'))
@@ -100,6 +111,7 @@ const MANAGER_CATEGORIES = [
   { id: 1045119, name: 'ПО и сервисы' },
   { id: 1045095, name: 'Логистические расходы' },
   { id: 1245493, name: 'Логистические расходы (не вх. в с/с)' },
+  { id: 1043953, name: 'Закупки' },
   { id: 1342729, name: 'Брак' },
   { id: 1045094, name: 'Упаковка' },
   { id: 1327155, name: 'Упаковка не вх с/с' },
@@ -390,18 +402,19 @@ async function handleManualEntry(
   const { amount: preParsedAmount, cleanText } = preParseAmount(text)
   const extracted = await extractExpenseFields(cleanText)
 
+  // Manual entry: trust all AI-extracted values (user provided the info directly)
   let data: Record<string, unknown> = {
     manager_id: managerId,
-    amount: preParsedAmount ?? (extracted.amount.confident ? extracted.amount.value : null),
-    date: extracted.date.confident && extracted.date.value
+    amount: preParsedAmount ?? extracted.amount.value,
+    date: extracted.date.value
       ? parseDate(extracted.date.value) ?? extracted.date.value
       : null,
-    account_info: extracted.account_name.confident ? extracted.account_name.value : null,
-    category_id: extracted.category_id.confident ? extracted.category_id.value : null,
-    category_name: extracted.category_name.confident ? extracted.category_name.value : null,
-    direction_id: extracted.direction_id.confident ? extracted.direction_id.value : null,
-    direction_name: extracted.direction_name.confident ? extracted.direction_name.value : null,
-    counterparty_name: extracted.counterparty_name.confident ? extracted.counterparty_name.value : null,
+    account_info: extracted.account_name.value,
+    category_id: extracted.category_id.value,
+    category_name: extracted.category_name.value,
+    direction_id: extracted.direction_id.value,
+    direction_name: extracted.direction_name.value,
+    counterparty_name: extracted.counterparty_name.value,
     description: extracted.description,
   }
 
