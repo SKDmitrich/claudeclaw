@@ -188,9 +188,18 @@ async function handleMessage(
     } else {
       await sendTextChunks(ctx, responseText)
     }
-  } catch (err) {
+  } catch (err: any) {
     logger.error({ err }, 'handleMessage error')
-    await ctx.reply('Something went wrong. Check the logs.').catch(() => {})
+
+    // Clear stale session so next message starts fresh
+    clearSession(chatId)
+    logger.info({ chatId }, 'Cleared session after error for auto-recovery')
+
+    const isExitCode1 = err?.message?.includes('exited with code 1')
+    const userMsg = isExitCode1
+      ? 'Claude subprocess crashed. Session cleared -- try sending your message again.'
+      : 'Something went wrong. Session cleared -- try again.'
+    await ctx.reply(userMsg).catch(() => {})
   }
 }
 
