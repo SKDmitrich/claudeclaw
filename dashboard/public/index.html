@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sofiny — Остатки WB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:         #faf8f6;
+  --bg-card:    #ffffff;
+  --bg-card-alt:#f5f0ec;
+  --bg-hover:   #f0ebe5;
+  --text:       #2c2420;
+  --text-muted: #8a7e76;
+  --text-light: #b5aaa0;
+  --border:     #e8e0d8;
+  --accent:     #c4929a;
+  --accent-soft:#e8c5ca;
+  --accent-bg:  #fdf2f4;
+  --purple:     #9b8cb5;
+  --purple-soft:#d4cce3;
+
+  --oos:        #c75c5c;
+  --oos-bg:     #fce8e8;
+  --oos-border: #e8a8a8;
+  --crit:       #c98a4e;
+  --crit-bg:    #fef3e6;
+  --crit-border:#e8c89a;
+  --low:        #b8a044;
+  --low-bg:     #fdf8e6;
+  --low-border: #e0d48a;
+  --med:        #6889a8;
+  --med-bg:     #e8f0f8;
+  --med-border: #a8c8e0;
+  --ok:         #6a9a6e;
+  --ok-bg:      #e8f4e8;
+  --ok-border:  #a8d0aa;
+
+  --shadow-sm:  0 1px 3px rgba(44,36,32,0.04), 0 1px 2px rgba(44,36,32,0.06);
+  --shadow-md:  0 4px 12px rgba(44,36,32,0.06), 0 2px 4px rgba(44,36,32,0.04);
+  --shadow-lg:  0 12px 40px rgba(44,36,32,0.08), 0 4px 12px rgba(44,36,32,0.04);
+  --radius:     12px;
+  --radius-sm:  8px;
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"]{
+  --bg:         #1a1816;
+  --bg-card:    #242120;
+  --bg-card-alt:#2c2826;
+  --bg-hover:   #342f2c;
+  --text:       #e8e0d8;
+  --text-muted: #8a7e76;
+  --text-light: #5a5048;
+  --border:     #3a3430;
+  --accent:     #d4a0a8;
+  --accent-soft:#5a3a40;
+  --accent-bg:  #2a1e20;
+  --purple:     #b0a0c8;
+  --purple-soft:#3a3048;
+
+  --oos-bg:     #2c1a1a;
+  --oos-border: #5a2828;
+  --crit-bg:    #2c2418;
+  --crit-border:#5a4020;
+  --low-bg:     #2a2818;
+  --low-border: #504820;
+  --med-bg:     #1a2430;
+  --med-border: #284060;
+  --ok-bg:      #1a2c1a;
+  --ok-border:  #285028;
+
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.2);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.25);
+  --shadow-lg:  0 12px 40px rgba(0,0,0,0.35);
+}
+
+html{font-size:15px;scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',system-ui,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.5;
+  min-height:100vh;
+  transition:background var(--transition), color var(--transition);
+}
+
+/* ── SCROLLBAR ─────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+/* ── TYPOGRAPHY ────────────────────────────── */
+.font-display{font-family:'Cormorant Garamond',Georgia,serif}
+h1,h2,h3{font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;letter-spacing:-0.01em}
+h1{font-size:2rem}
+h2{font-size:1.4rem;color:var(--text)}
+h3{font-size:1.15rem}
+
+/* ── LAYOUT ────────────────────────────────── */
+.container{max-width:1400px;margin:0 auto;padding:0 24px}
+
+header{
+  position:sticky;top:0;z-index:100;
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(12px);
+  padding:16px 0;
+  transition:background var(--transition), border-color var(--transition);
+}
+header .container{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.header-left{display:flex;align-items:baseline;gap:12px}
+.header-left h1{white-space:nowrap}
+.header-date{color:var(--text-muted);font-size:0.85rem;font-weight:400}
+.header-right{display:flex;align-items:center;gap:12px}
+
+.refresh-btn{
+  background:none;border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:6px 14px;color:var(--text-muted);cursor:pointer;font-size:0.8rem;
+  font-family:inherit;transition:all var(--transition);display:flex;align-items:center;gap:6px;
+}
+.refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+.refresh-btn.loading svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── THEME TOGGLE ──────────────────────────── */
+.theme-toggle{
+  width:44px;height:24px;border-radius:12px;border:1px solid var(--border);
+  background:var(--bg-card-alt);cursor:pointer;position:relative;transition:all var(--transition);
+}
+.theme-toggle::after{
+  content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;
+  border-radius:50%;background:var(--accent);transition:transform var(--transition);
+}
+[data-theme="dark"] .theme-toggle::after{transform:translateX(20px)}
+.theme-toggle:hover{border-color:var(--accent)}
+
+/* ── SECTION ───────────────────────────────── */
+section{padding:28px 0}
+.section-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:18px;gap:12px;flex-wrap:wrap;
+}
+.section-header h2{position:relative}
+.section-header h2::after{
+  content:'';position:absolute;bottom:-4px;left:0;
+  width:32px;height:2px;background:var(--accent);border-radius:1px;
+}
+
+/* ── URGENCY CARDS ─────────────────────────── */
+.urgency-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.urgency-card{
+  padding:18px 20px;border-radius:var(--radius);cursor:pointer;
+  border:1.5px solid transparent;transition:all var(--transition);position:relative;overflow:hidden;
+}
+.urgency-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  opacity:0.7;transition:opacity var(--transition);
+}
+.urgency-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.urgency-card.active{border-color:var(--text-muted)}
+.urgency-card .label{font-size:0.75rem;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px}
+.urgency-card .count{font-family:'Cormorant Garamond',serif;font-size:2.4rem;font-weight:700;line-height:1}
+.urgency-card .sub{font-size:0.72rem;color:var(--text-muted);margin-top:4px}
+
+.urgency-card[data-u="OUT_OF_STOCK"]{background:var(--oos-bg)}.urgency-card[data-u="OUT_OF_STOCK"]::before{background:var(--oos)}.urgency-card[data-u="OUT_OF_STOCK"] .label{color:var(--oos)}
+.urgency-card[data-u="CRITICAL"]{background:var(--crit-bg)}.urgency-card[data-u="CRITICAL"]::before{background:var(--crit)}.urgency-card[data-u="CRITICAL"] .label{color:var(--crit)}
+.urgency-card[data-u="LOW"]{background:var(--low-bg)}.urgency-card[data-u="LOW"]::before{background:var(--low)}.urgency-card[data-u="LOW"] .label{color:var(--low)}
+.urgency-card[data-u="MEDIUM"]{background:var(--med-bg)}.urgency-card[data-u="MEDIUM"]::before{background:var(--med)}.urgency-card[data-u="MEDIUM"] .label{color:var(--med)}
+.urgency-card[data-u="OK"]{background:var(--ok-bg)}.urgency-card[data-u="OK"]::before{background:var(--ok)}.urgency-card[data-u="OK"] .label{color:var(--ok)}
+
+/* ── DAILY METRICS ─────────────────────────── */
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.metric-card{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px 18px;transition:all var(--transition);
+}
+.metric-card:hover{box-shadow:var(--shadow-sm)}
+.metric-card .metric-label{font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
+.metric-card .metric-value{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:700;line-height:1.2}
+.metric-card .metric-change{font-size:0.75rem;margin-top:2px}
+.metric-card .metric-change.up{color:var(--ok)}
+.metric-card .metric-change.down{color:var(--oos)}
+.metric-card canvas{margin-top:8px;width:100%!important;height:36px!important}
+
+/* ── CHARTS ────────────────────────────────── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.chart-card{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;box-shadow:var(--shadow-sm);transition:all var(--transition);
+}
+.chart-card:hover{box-shadow:var(--shadow-md)}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px}
+.chart-header h3{font-size:1rem}
+.chart-wrap{position:relative;height:240px}
+.chart-wrap canvas{width:100%!important;height:100%!important}
+
+/* ── SELECTS & INPUTS ──────────────────────── */
+select,input[type="text"]{
+  font-family:inherit;font-size:0.82rem;color:var(--text);
+  background:var(--bg-card-alt);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:7px 12px;outline:none;
+  transition:all var(--transition);
+}
+select:focus,input[type="text"]:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+select{padding-right:28px;cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a7e76' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+}
+
+/* ── TABLES ────────────────────────────────── */
+.table-wrap{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;box-shadow:var(--shadow-sm);
+}
+.table-toolbar{
+  display:flex;align-items:center;gap:10px;padding:14px 18px;
+  border-bottom:1px solid var(--border);flex-wrap:wrap;
+}
+.table-toolbar .count{font-size:0.78rem;color:var(--text-muted);margin-left:auto}
+table{width:100%;border-collapse:collapse;font-size:0.82rem}
+thead{background:var(--bg-card-alt)}
+th{
+  padding:10px 14px;text-align:left;font-weight:600;font-size:0.72rem;
+  text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);
+  border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;
+  user-select:none;transition:color var(--transition);
+}
+th:hover{color:var(--text)}
+th.sorted-asc::after{content:' ▲';font-size:0.6rem}
+th.sorted-desc::after{content:' ▼';font-size:0.6rem}
+td{padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background var(--transition)}
+tbody tr:hover{background:var(--bg-hover)}
+
+tr.row-oos{background:var(--oos-bg)}
+tr.row-oos:hover{background:color-mix(in srgb, var(--oos-bg), var(--bg-hover))}
+tr.row-crit{background:var(--crit-bg)}
+tr.row-crit:hover{background:color-mix(in srgb, var(--crit-bg), var(--bg-hover))}
+tr.row-low{background:var(--low-bg)}
+tr.row-low:hover{background:color-mix(in srgb, var(--low-bg), var(--bg-hover))}
+
+.urgency-badge{
+  display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.7rem;
+  font-weight:600;text-transform:uppercase;letter-spacing:0.04em;
+}
+.urgency-badge.OUT_OF_STOCK{background:var(--oos-bg);color:var(--oos);border:1px solid var(--oos-border)}
+.urgency-badge.CRITICAL{background:var(--crit-bg);color:var(--crit);border:1px solid var(--crit-border)}
+.urgency-badge.LOW{background:var(--low-bg);color:var(--low);border:1px solid var(--low-border)}
+.urgency-badge.MEDIUM{background:var(--med-bg);color:var(--med);border:1px solid var(--med-border)}
+.urgency-badge.OK{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-border)}
+
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.bold{font-weight:600}
+
+/* ── MOYSKLAD GRID ─────────────────────────── */
+.ms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.ms-card{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px 18px;transition:all var(--transition);
+}
+.ms-card:hover{box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+.ms-card .ms-name{font-weight:600;font-size:0.9rem;margin-bottom:6px;line-height:1.3}
+.ms-card .ms-stats{display:flex;gap:16px;margin-bottom:8px}
+.ms-card .ms-stat{display:flex;flex-direction:column}
+.ms-card .ms-stat-label{font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em}
+.ms-card .ms-stat-value{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:700;line-height:1.2}
+.ms-card .ms-sizes{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.ms-card .ms-size-tag{
+  background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;
+  padding:2px 8px;font-size:0.7rem;color:var(--text-muted);
+}
+.ms-card .ms-transit{color:var(--purple);font-weight:500}
+
+/* ── LOADING / EMPTY ───────────────────────── */
+.loading-state,.empty-state{
+  text-align:center;padding:48px 24px;color:var(--text-muted);font-size:0.9rem;
+}
+.loading-state::before{
+  content:'';display:block;width:28px;height:28px;border:2px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;
+  margin:0 auto 12px;
+}
+
+/* ── ANIMATIONS ────────────────────────────── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.animate-in{animation:fadeUp 0.4s ease-out both}
+.delay-1{animation-delay:0.05s}.delay-2{animation-delay:0.1s}.delay-3{animation-delay:0.15s}
+.delay-4{animation-delay:0.2s}.delay-5{animation-delay:0.25s}
+
+/* ── RESPONSIVE ────────────────────────────── */
+@media(max-width:900px){
+  .urgency-grid{grid-template-columns:repeat(3,1fr)}
+  .charts-row{grid-template-columns:1fr}
+  .ms-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+}
+@media(max-width:600px){
+  html{font-size:14px}
+  .container{padding:0 14px}
+  .urgency-grid{grid-template-columns:repeat(2,1fr)}
+  .urgency-card .count{font-size:1.8rem}
+  .metrics-grid{grid-template-columns:repeat(2,1fr)}
+  .table-toolbar{flex-direction:column;align-items:stretch}
+  .table-wrap{overflow-x:auto}
+  table{min-width:700px}
+  header .container{flex-direction:column;align-items:flex-start}
+}
+
+/* ── DECORATIVE DIVIDER ────────────────────── */
+.divider{
+  height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);
+  margin:8px 0;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="header-left">
+      <h1 class="font-display">Sofiny <span style="color:var(--accent)">—</span> Остатки WB</h1>
+      <span class="header-date" id="headerDate"></span>
+    </div>
+    <div class="header-right">
+      <button class="refresh-btn" id="refreshBtn" title="Обновить данные">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        Обновить
+      </button>
+      <div class="theme-toggle" id="themeToggle" title="Тема"></div>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- DAILY METRICS -->
+  <section>
+    <div class="section-header"><h2>Сводка за день</h2></div>
+    <div class="metrics-grid" id="metricsGrid">
+      <div class="loading-state">Загрузка...</div>
+    </div>
+  </section>
+
+  <!-- URGENCY CARDS -->
+  <section>
+    <div class="section-header"><h2>Статус позиций</h2></div>
+    <div class="urgency-grid" id="urgencyGrid">
+      <div class="loading-state" style="grid-column:1/-1">Загрузка...</div>
+    </div>
+  </section>
+
+  <!-- CHARTS -->
+  <section>
+    <div class="section-header">
+      <h2>Динамика</h2>
+      <select id="chartArticle" style="min-width:200px">
+        <option value="">Все артикулы</option>
+      </select>
+    </div>
+    <div class="charts-row">
+      <div class="chart-card animate-in delay-1">
+        <div class="chart-header"><h3>Заказы (30 дней)</h3></div>
+        <div class="chart-wrap"><canvas id="ordersChart"></canvas></div>
+      </div>
+      <div class="chart-card animate-in delay-2">
+        <div class="chart-header"><h3>Остатки</h3></div>
+        <div class="chart-wrap"><canvas id="stockChart"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESTOCK RECOMMENDATIONS -->
+  <section>
+    <div class="section-header"><h2>Пополнение</h2></div>
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <span style="font-size:0.82rem;font-weight:500">Рекомендации по отгрузке</span>
+        <span class="count" id="restockCount"></span>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="restockTable">
+          <thead>
+            <tr>
+              <th data-col="supplier_article">Артикул</th>
+              <th data-col="tech_size">Размер</th>
+              <th data-col="total_stock" class="num">Остаток</th>
+              <th data-col="total_daily_orders" class="num">Заказов/день</th>
+              <th data-col="days_left" class="num">Хватит на</th>
+              <th data-col="need_14d" class="num">14 дн</th>
+              <th data-col="need_30d" class="num">30 дн</th>
+              <th data-col="oos_warehouses" class="num">Пустых</th>
+            </tr>
+          </thead>
+          <tbody id="restockBody"><tr><td colspan="8" class="loading-state">Загрузка...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- MOYSKLAD OWN WAREHOUSE -->
+  <section>
+    <div class="section-header"><h2>Свой склад <span style="font-weight:400;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:0.82rem">МойСклад</span></h2></div>
+    <div class="ms-grid" id="msGrid">
+      <div class="loading-state" style="grid-column:1/-1">Загрузка...</div>
+    </div>
+  </section>
+
+  <!-- FULL FORECAST TABLE -->
+  <section>
+    <div class="section-header"><h2>Детально по складам</h2></div>
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <select id="filterUrgency">
+          <option value="all">Все статусы</option>
+          <option value="OUT_OF_STOCK">Нет в наличии</option>
+          <option value="CRITICAL">Критично</option>
+          <option value="LOW">Мало</option>
+          <option value="MEDIUM">Средне</option>
+          <option value="OK">Ок</option>
+        </select>
+        <input type="text" id="filterArticle" placeholder="Поиск артикула..." style="width:160px">
+        <select id="filterWarehouse">
+          <option value="">Все склады</option>
+        </select>
+        <span class="count" id="forecastCount"></span>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="forecastTable">
+          <thead>
+            <tr>
+              <th data-col="supplier_article">Артикул</th>
+              <th data-col="tech_size">Размер</th>
+              <th data-col="warehouse_name">Склад</th>
+              <th data-col="stock_total" class="num">Остаток</th>
+              <th data-col="avg_daily_orders_7d" class="num">Заказ/день 7д</th>
+              <th data-col="avg_daily_orders_14d" class="num">Заказ/день 14д</th>
+              <th data-col="days_remaining" class="num">Дней</th>
+              <th data-col="restock_14d" class="num">14 дн</th>
+              <th data-col="restock_30d" class="num">30 дн</th>
+              <th data-col="cancel_rate" class="num">Отмены</th>
+              <th data-col="urgency">Статус</th>
+            </tr>
+          </thead>
+          <tbody id="forecastBody"><tr><td colspan="11" class="loading-state">Загрузка...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <div style="height:40px"></div>
+</main>
+
+<script>
+// ── CONFIG ──────────────────────────────────
+const API = '';
+const urgencyLabels = {
+  OUT_OF_STOCK: 'Нет в наличии',
+  CRITICAL: 'Критично (<3 дн)',
+  LOW: 'Мало (<7 дн)',
+  MEDIUM: 'Средне (7-14 дн)',
+  OK: 'Ок (>14 дн)'
+};
+const urgencyIcons = { OUT_OF_STOCK:'🔴', CRITICAL:'🟠', LOW:'🟡', MEDIUM:'🔵', OK:'🟢' };
+
+// ── STATE ───────────────────────────────────
+let activeUrgency = null;
+let forecastData = [];
+let sortCol = null;
+let sortDir = 'asc';
+let ordersChart = null;
+let stockChart = null;
+
+// ── THEME ───────────────────────────────────
+const themeToggle = document.getElementById('themeToggle');
+const savedTheme = localStorage.getItem('sofiny-theme') || 'light';
+document.documentElement.setAttribute('data-theme', savedTheme);
+themeToggle.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('sofiny-theme', next);
+  updateChartColors();
+});
+
+// ── DATE ────────────────────────────────────
+document.getElementById('headerDate').textContent = new Date().toLocaleDateString('ru-RU', {
+  weekday:'long', day:'numeric', month:'long', year:'numeric'
+});
+
+// ── FETCH HELPER ────────────────────────────
+async function api(path) {
+  const resp = await fetch(API + path);
+  if (!resp.ok) throw new Error(`API ${path}: ${resp.status}`);
+  return resp.json();
+}
+
+// ── LOAD ALL DATA ───────────────────────────
+async function loadAll() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('loading');
+  try {
+    await Promise.all([
+      loadSummary(),
+      loadMetrics(),
+      loadRestock(),
+      loadMoysklad(),
+      loadForecast(),
+      loadFilters(),
+      loadCharts(),
+    ]);
+  } catch(e) {
+    console.error('Load error:', e);
+  }
+  btn.classList.remove('loading');
+}
+
+// ── SUMMARY CARDS ───────────────────────────
+async function loadSummary() {
+  const data = await api('/api/summary');
+  const grid = document.getElementById('urgencyGrid');
+  const all = ['OUT_OF_STOCK','CRITICAL','LOW','MEDIUM','OK'];
+  const counts = {};
+  data.forEach(r => counts[r.urgency] = parseInt(r.cnt));
+  const total = Object.values(counts).reduce((a,b) => a+b, 0);
+
+  grid.innerHTML = all.map((u, i) => `
+    <div class="urgency-card animate-in delay-${i+1}" data-u="${u}" onclick="toggleUrgency('${u}')">
+      <div class="label">${urgencyIcons[u]} ${urgencyLabels[u]}</div>
+      <div class="count">${counts[u] || 0}</div>
+      <div class="sub">${total ? Math.round((counts[u]||0)/total*100) : 0}% позиций</div>
+    </div>
+  `).join('');
+}
+
+function toggleUrgency(u) {
+  if (activeUrgency === u) {
+    activeUrgency = null;
+    document.getElementById('filterUrgency').value = 'all';
+  } else {
+    activeUrgency = u;
+    document.getElementById('filterUrgency').value = u;
+  }
+  document.querySelectorAll('.urgency-card').forEach(c => {
+    c.classList.toggle('active', c.dataset.u === activeUrgency);
+  });
+  renderForecast();
+}
+
+// ── DAILY METRICS ───────────────────────────
+async function loadMetrics() {
+  const data = await api('/api/daily-summary');
+  const grid = document.getElementById('metricsGrid');
+  if (!data.length) { grid.innerHTML = '<div class="empty-state">Нет данных</div>'; return; }
+
+  const latest = data[0];
+  const prev = data[1] || {};
+
+  function delta(cur, old) {
+    if (!old || !cur) return '';
+    const d = cur - old;
+    if (d === 0) return '';
+    const pct = old ? Math.round(d / old * 100) : 0;
+    const cls = d > 0 ? 'up' : 'down';
+    const sign = d > 0 ? '+' : '';
+    return `<div class="metric-change ${cls}">${sign}${pct}%</div>`;
+  }
+
+  function sparkData(key) {
+    return data.slice(0, 14).reverse().map(r => parseFloat(r[key]) || 0);
+  }
+
+  const cards = [
+    { label:'Заказы', value: fmt(latest.total_orders), change: delta(latest.total_orders, prev.total_orders), spark: sparkData('total_orders'), color:'var(--accent)' },
+    { label:'Продажи', value: fmt(latest.total_sales), change: delta(latest.total_sales, prev.total_sales), spark: sparkData('total_sales'), color:'var(--ok)' },
+    { label:'Выручка', value: fmtMoney(latest.total_revenue), change: delta(latest.total_revenue, prev.total_revenue), spark: sparkData('total_revenue'), color:'var(--purple)' },
+    { label:'Возвраты', value: fmt(latest.total_returns), change: delta(latest.total_returns, prev.total_returns), spark: sparkData('total_returns'), color:'var(--oos)' },
+    { label:'Средний чек', value: fmtMoney(latest.avg_price), change: delta(latest.avg_price, prev.avg_price), spark: sparkData('avg_price'), color:'var(--med)' },
+    { label:'Артикулов', value: fmt(latest.unique_articles), change: '', spark: sparkData('unique_articles'), color:'var(--crit)' },
+  ];
+
+  grid.innerHTML = cards.map((c, i) => `
+    <div class="metric-card animate-in delay-${(i%5)+1}">
+      <div class="metric-label">${c.label}</div>
+      <div class="metric-value">${c.value}</div>
+      ${c.change}
+      <canvas id="spark${i}" height="36"></canvas>
+    </div>
+  `).join('');
+
+  // Draw sparklines
+  cards.forEach((c, i) => {
+    const canvas = document.getElementById('spark' + i);
+    if (!canvas || !c.spark.length) return;
+    new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: c.spark.map((_,j) => j),
+        datasets: [{
+          data: c.spark, borderColor: c.color, borderWidth: 1.5,
+          pointRadius: 0, tension: 0.4, fill: true,
+          backgroundColor: c.color + '15',
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: { x: { display: false }, y: { display: false } },
+        animation: false,
+      }
+    });
+  });
+}
+
+// ── CHARTS ──────────────────────────────────
+async function loadCharts(article) {
+  const params = article ? `?article=${encodeURIComponent(article)}` : '';
+  const [orders, stocks] = await Promise.all([
+    api('/api/orders-trend' + params),
+    api('/api/stock-history' + params),
+  ]);
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+  const textColor = isDark ? '#8a7e76' : '#8a7e76';
+
+  const chartOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, labels: { font: { family: "'DM Sans'" }, boxWidth: 12, padding: 16, color: textColor } },
+      tooltip: {
+        backgroundColor: isDark ? '#2c2826' : '#fff',
+        titleColor: isDark ? '#e8e0d8' : '#2c2420',
+        bodyColor: isDark ? '#e8e0d8' : '#2c2420',
+        borderColor: isDark ? '#3a3430' : '#e8e0d8',
+        borderWidth: 1,
+        padding: 10, cornerRadius: 8,
+        titleFont: { family: "'DM Sans'", weight: '600' },
+        bodyFont: { family: "'DM Sans'" },
+      }
+    },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: "'DM Sans'", size: 11 } } },
+      y: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: "'DM Sans'", size: 11 } } },
+    }
+  };
+
+  // Orders chart
+  const ordersCtx = document.getElementById('ordersChart');
+  if (ordersChart) ordersChart.destroy();
+  ordersChart = new Chart(ordersCtx, {
+    type: 'line',
+    data: {
+      labels: orders.map(r => fmtDate(r.date)),
+      datasets: [
+        {
+          label: 'Заказы', data: orders.map(r => parseInt(r.orders)),
+          borderColor: 'rgb(196,146,154)', backgroundColor: 'rgba(196,146,154,0.1)',
+          borderWidth: 2, pointRadius: 2, pointHoverRadius: 5, tension: 0.3, fill: true,
+        },
+        {
+          label: 'Отмены', data: orders.map(r => parseInt(r.cancels)),
+          borderColor: 'rgb(199,92,92)', backgroundColor: 'rgba(199,92,92,0.08)',
+          borderWidth: 1.5, pointRadius: 0, tension: 0.3, borderDash: [4,4], fill: true,
+        }
+      ]
+    },
+    options: chartOpts,
+  });
+
+  // Stock chart
+  const stockCtx = document.getElementById('stockChart');
+  if (stockChart) stockChart.destroy();
+  stockChart = new Chart(stockCtx, {
+    type: 'line',
+    data: {
+      labels: stocks.map(r => fmtDate(r.date)),
+      datasets: [{
+        label: 'Остатки', data: stocks.map(r => parseInt(r.total_stock)),
+        borderColor: 'rgb(155,140,181)', backgroundColor: 'rgba(155,140,181,0.12)',
+        borderWidth: 2, pointRadius: 1, tension: 0.3, fill: true,
+      }]
+    },
+    options: chartOpts,
+  });
+}
+
+function updateChartColors() {
+  // Reload charts with current theme
+  const sel = document.getElementById('chartArticle');
+  loadCharts(sel.value || undefined);
+}
+
+// ── ARTICLE SELECTOR FOR CHARTS ─────────────
+async function loadFilters() {
+  const [articles, warehouses] = await Promise.all([
+    api('/api/articles'),
+    api('/api/warehouses'),
+  ]);
+  const artSel = document.getElementById('chartArticle');
+  const whSel = document.getElementById('filterWarehouse');
+  articles.forEach(a => {
+    artSel.innerHTML += `<option value="${a}">${a}</option>`;
+  });
+  warehouses.forEach(w => {
+    whSel.innerHTML += `<option value="${w}">${w}</option>`;
+  });
+}
+
+document.getElementById('chartArticle').addEventListener('change', e => {
+  loadCharts(e.target.value || undefined);
+});
+
+// ── RESTOCK TABLE ───────────────────────────
+async function loadRestock() {
+  const data = await api('/api/restock');
+  const body = document.getElementById('restockBody');
+  document.getElementById('restockCount').textContent = `${data.length} позиций`;
+
+  if (!data.length) {
+    body.innerHTML = '<tr><td colspan="8" class="empty-state">Все в порядке</td></tr>';
+    return;
+  }
+
+  body.innerHTML = data.map(r => {
+    const days = parseFloat(r.days_left);
+    const cls = days <= 0 ? 'row-oos' : days <= 3 ? 'row-crit' : days <= 7 ? 'row-low' : '';
+    const daysStr = days <= 0 ? '<b style="color:var(--oos)">ЗАКОНЧИЛСЯ</b>' : days >= 999 ? '---' : days.toFixed(1) + ' дн';
+    return `<tr class="${cls}">
+      <td class="bold">${r.supplier_article}</td>
+      <td>${r.tech_size}</td>
+      <td class="num">${fmt(r.total_stock)}</td>
+      <td class="num">${r.total_daily_orders}</td>
+      <td class="num">${daysStr}</td>
+      <td class="num">${fmt(r.need_14d)}</td>
+      <td class="num">${fmt(r.need_30d)}</td>
+      <td class="num">${parseInt(r.oos_warehouses) > 0 ? '<b style="color:var(--oos)">' + r.oos_warehouses + '</b>' : r.oos_warehouses}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── MOYSKLAD GRID ───────────────────────────
+async function loadMoysklad() {
+  const data = await api('/api/moysklad');
+  const grid = document.getElementById('msGrid');
+  if (!data.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">Нет данных МойСклад</div>';
+    return;
+  }
+
+  grid.innerHTML = data.map((item, i) => `
+    <div class="ms-card animate-in delay-${(i%5)+1}">
+      <div class="ms-name">${item.name}</div>
+      <div class="ms-stats">
+        <div class="ms-stat">
+          <div class="ms-stat-label">Остаток</div>
+          <div class="ms-stat-value">${Math.round(item.stock)}</div>
+        </div>
+        ${item.inTransit > 0 ? `
+        <div class="ms-stat">
+          <div class="ms-stat-label">В пути</div>
+          <div class="ms-stat-value ms-transit">${Math.round(item.inTransit)}</div>
+        </div>` : ''}
+        ${item.reserve > 0 ? `
+        <div class="ms-stat">
+          <div class="ms-stat-label">Резерв</div>
+          <div class="ms-stat-value">${Math.round(item.reserve)}</div>
+        </div>` : ''}
+      </div>
+      ${item.sizes.length ? `<div class="ms-sizes">${item.sizes.map(s => `<span class="ms-size-tag">${s.size}: ${s.qty}</span>`).join('')}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+// ── FULL FORECAST TABLE ─────────────────────
+async function loadForecast() {
+  forecastData = await api('/api/forecast');
+  renderForecast();
+}
+
+function renderForecast() {
+  const urgFilter = document.getElementById('filterUrgency').value;
+  const artFilter = document.getElementById('filterArticle').value.toLowerCase();
+  const whFilter = document.getElementById('filterWarehouse').value;
+
+  let filtered = forecastData;
+  if (urgFilter !== 'all') filtered = filtered.filter(r => r.urgency === urgFilter);
+  if (artFilter) filtered = filtered.filter(r => r.supplier_article.toLowerCase().includes(artFilter));
+  if (whFilter) filtered = filtered.filter(r => r.warehouse_name === whFilter);
+
+  if (sortCol) {
+    filtered.sort((a, b) => {
+      let va = a[sortCol], vb = b[sortCol];
+      if (!isNaN(parseFloat(va))) { va = parseFloat(va); vb = parseFloat(vb); }
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  document.getElementById('forecastCount').textContent = `${filtered.length} из ${forecastData.length}`;
+  const body = document.getElementById('forecastBody');
+
+  if (!filtered.length) {
+    body.innerHTML = '<tr><td colspan="11" class="empty-state">Нет данных</td></tr>';
+    return;
+  }
+
+  body.innerHTML = filtered.map(r => {
+    const cls = r.urgency === 'OUT_OF_STOCK' ? 'row-oos' : r.urgency === 'CRITICAL' ? 'row-crit' : r.urgency === 'LOW' ? 'row-low' : '';
+    const days = parseFloat(r.days_remaining);
+    const daysStr = days === null || isNaN(days) ? '---' : days >= 999 ? '---' : days.toFixed(1);
+    const cancelPct = r.cancel_rate ? (parseFloat(r.cancel_rate) * 100).toFixed(0) + '%' : '---';
+    return `<tr class="${cls}">
+      <td class="bold">${r.supplier_article}</td>
+      <td>${r.tech_size}</td>
+      <td>${r.warehouse_name}</td>
+      <td class="num">${fmt(r.stock_total)}</td>
+      <td class="num">${r.avg_daily_orders_7d ? parseFloat(r.avg_daily_orders_7d).toFixed(1) : '0'}</td>
+      <td class="num">${r.avg_daily_orders_14d ? parseFloat(r.avg_daily_orders_14d).toFixed(1) : '0'}</td>
+      <td class="num bold">${daysStr}</td>
+      <td class="num">${fmt(r.restock_14d)}</td>
+      <td class="num">${fmt(r.restock_30d)}</td>
+      <td class="num">${cancelPct}</td>
+      <td><span class="urgency-badge ${r.urgency}">${urgencyLabels[r.urgency] || r.urgency}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// Filters
+document.getElementById('filterUrgency').addEventListener('change', () => {
+  activeUrgency = document.getElementById('filterUrgency').value === 'all' ? null : document.getElementById('filterUrgency').value;
+  document.querySelectorAll('.urgency-card').forEach(c => c.classList.toggle('active', c.dataset.u === activeUrgency));
+  renderForecast();
+});
+document.getElementById('filterArticle').addEventListener('input', renderForecast);
+document.getElementById('filterWarehouse').addEventListener('change', renderForecast);
+
+// Sortable headers
+document.querySelectorAll('#forecastTable th[data-col], #restockTable th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    const table = th.closest('table');
+    table.querySelectorAll('th').forEach(t => { t.classList.remove('sorted-asc','sorted-desc'); });
+    if (sortCol === col) {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortCol = col;
+      sortDir = 'asc';
+    }
+    th.classList.add(sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    renderForecast();
+  });
+});
+
+// Refresh
+document.getElementById('refreshBtn').addEventListener('click', loadAll);
+
+// ── HELPERS ─────────────────────────────────
+function fmt(n) {
+  if (n === null || n === undefined) return '---';
+  const num = parseInt(n);
+  if (isNaN(num)) return '---';
+  return num.toLocaleString('ru-RU');
+}
+
+function fmtMoney(n) {
+  if (n === null || n === undefined) return '---';
+  const num = parseFloat(n);
+  if (isNaN(num)) return '---';
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + ' млн';
+  if (num >= 1000) return Math.round(num / 1000) + ' тыс';
+  return Math.round(num).toLocaleString('ru-RU');
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  const parts = d.split('-');
+  return parts[2] + '.' + parts[1];
+}
+
+// ── INIT ────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
