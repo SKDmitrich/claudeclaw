@@ -35,6 +35,7 @@ const env = loadEnv()
 const BOT_TOKEN = env.TELEGRAM_BOT_TOKEN
 const CHAT_ID = env.ALLOWED_CHAT_ID
 const PG_PASSWORD = env.POSTGRES_PASSWORD || 'H7fpXAHTtGisXQEvGwHREhNpT73sGI3f'
+const MS_TOKEN = env.MOYSKLAD_API_TOKEN
 
 const pool = new pg.Pool({
   host: '172.18.0.2',
@@ -115,6 +116,55 @@ async function main() {
     LIMIT 10
   `)
 
+  // 4. Fetch own warehouse stock from MoySklad
+  interface MsStockItem { name: string; article: string; stock: number; reserve: number; inTransit: number }
+  const msStock: MsStockItem[] = []
+  if (MS_TOKEN) {
+    try {
+      let offset = 0
+      const limit = 1000
+      let hasMore = true
+      while (hasMore) {
+        const resp = await fetch(
+          `https://api.moysklad.ru/api/remap/1.2/report/stock/all?limit=${limit}&offset=${offset}`,
+          { headers: { Authorization: `Bearer ${MS_TOKEN}`, 'Accept-Encoding': 'gzip' } }
+        )
+        if (!resp.ok) break
+        const data = await resp.json() as any
+        for (const r of data.rows ?? []) {
+          if (r.stock > 0 || r.inTransit > 0) {
+            msStock.push({
+              name: r.name ?? '',
+              article: r.article ?? r.code ?? '',
+              stock: r.stock ?? 0,
+              reserve: r.reserve ?? 0,
+              inTransit: r.inTransit ?? 0,
+            })
+          }
+        }
+        offset += (data.rows ?? []).length
+        if (offset >= (data.meta?.size ?? 0)) hasMore = false
+      }
+    } catch (err: any) {
+      console.error('[moysklad] Fetch error:', err.message)
+    }
+  }
+
+  // Aggregate MS stock by article (group sizes)
+  const msByArticle: Record<string, { stock: number; reserve: number; inTransit: number; sizes: string[] }> = {}
+  for (const item of msStock) {
+    // Extract base article from name (before size separator)
+    const nameParts = item.name.split('/')
+    const baseName = nameParts[0].trim()
+    const size = nameParts.length > 1 ? nameParts[1].trim() : ''
+
+    if (!msByArticle[baseName]) msByArticle[baseName] = { stock: 0, reserve: 0, inTransit: 0, sizes: [] }
+    msByArticle[baseName].stock += item.stock
+    msByArticle[baseName].reserve += item.reserve
+    msByArticle[baseName].inTransit += item.inTransit
+    if (size && item.stock > 0) msByArticle[baseName].sizes.push(`${size}:${Math.round(item.stock)}`)
+  }
+
   // ─── Build message ──────────────────────────────────────────────────
 
   const date = new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -147,6 +197,20 @@ async function main() {
       }
       msg += '\n'
     }
+  }
+
+  // MoySklad own warehouse stock
+  if (Object.keys(msByArticle).length > 0) {
+    msg += `<b>🏠 Свой склад (МойСклад):</b>\n`
+    const sorted = Object.entries(msByArticle)
+      .sort((a, b) => b[1].stock - a[1].stock)
+
+    for (const [art, data] of sorted) {
+      const transit = data.inTransit > 0 ? ` | в пути: ${Math.round(data.inTransit)}` : ''
+      const sizes = data.sizes.length > 0 ? ` [${data.sizes.join(', ')}]` : ''
+      msg += `  ${art}: <b>${Math.round(data.stock)}</b> шт${transit}${sizes}\n`
+    }
+    msg += '\n'
   }
 
   // Warehouse summary
