@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}WB Review Bot{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        wb: { 50: '#fdf2f8', 100: '#fce7f3', 500: '#cb11ab', 600: '#a21caf', 700: '#86198f' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .star { color: #f59e0b; }
+        .toast { position: fixed; top: 1rem; right: 1rem; z-index: 50; }
+    </style>
+</head>
+<body class="h-full bg-gray-50">
+    <!-- Top Nav Bar -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-gray-900 flex items-center text-xs" style="height:39px">
+        <a href="https://sofiny-pro.ru" class="topnav-link px-4 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border-b-2 border-transparent">Sofiny</a>
+        <a href="https://bot.sofiny-pro.ru" class="topnav-link px-4 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border-b-2 border-transparent">Ответто</a>
+        <a href="https://superset.sofiny-pro.ru" class="topnav-link px-4 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border-b-2 border-transparent">Дашборд</a>
+        <a href="https://dash.sofiny-pro.ru" class="topnav-link px-4 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border-b-2 border-transparent">Остатки</a>
+        <script>document.querySelectorAll('.topnav-link').forEach(function(a){if(a.href.includes(location.hostname)){a.className=a.className.replace('text-gray-400','text-white font-medium').replace('border-transparent','border-pink-400')}})</script>
+    </nav>
+
+    <div class="min-h-full" style="padding-top:39px">
+        <!-- Sidebar -->
+        <nav class="fixed left-0 w-64 bg-white border-r border-gray-200 z-40" style="top:39px;bottom:0">
+            <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#7c3aed,#cb11ab);">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2L14.9 8.1L21.5 9L16.7 13.6L17.8 20.2L12 17.1L6.2 20.2L7.3 13.6L2.5 9L9.1 8.1L12 2Z" fill="white" opacity="0.9"/>
+                        <path d="M7 14.5C7 14.5 8.5 16 12 16C15.5 16 17 14.5 17 14.5" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="font-semibold text-gray-900 text-sm">Система Управления Отзывами</div>
+                </div>
+            </div>
+            <div class="px-3 py-4 space-y-1">
+                <a href="/" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ 'bg-wb-50 text-wb-700' if active == 'dashboard' else 'text-gray-600 hover:bg-gray-50' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                    Дашборд
+                </a>
+                <a href="/reviews" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ 'bg-wb-50 text-wb-700' if active == 'reviews' else 'text-gray-600 hover:bg-gray-50' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+                    Отзывы
+                </a>
+                <a href="/questions" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ 'bg-wb-50 text-wb-700' if active == 'questions' else 'text-gray-600 hover:bg-gray-50' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Вопросы
+                </a>
+                <a href="/analysis" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ 'bg-wb-50 text-wb-700' if active == 'analysis' else 'text-gray-600 hover:bg-gray-50' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Анализ товаров
+                </a>
+                <a href="/ai-analyst" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ 'bg-wb-50 text-wb-700' if active == 'ai-analyst' else 'text-gray-600 hover:bg-gray-50' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                    AI Аналитик
+                </a>
+                <a href="/cabinets" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ 'bg-wb-50 text-wb-700' if active == 'cabinets' else 'text-gray-600 hover:bg-gray-50' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                    Кабинеты
+                </a>
+                <a href="/users" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ 'bg-wb-50 text-wb-700' if active == 'users' else 'text-gray-600 hover:bg-gray-50' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    Пользователи
+                </a>
+                <a href="/settings" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ 'bg-wb-50 text-wb-700' if active == 'settings' else 'text-gray-600 hover:bg-gray-50' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Настройки
+                </a>
+                <div class="border-t border-gray-100 my-2 mx-3"></div>
+                <a href="/help" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ 'bg-wb-50 text-wb-700' if active == 'help' else 'text-gray-600 hover:bg-gray-50' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    Инструкция
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="pl-64">
+            <div class="px-8 py-6">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    {% if flash %}
+    <div class="toast fade-in">
+        <div class="bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg text-sm" id="toast">
+            {{ flash }}
+        </div>
+    </div>
+    <script>setTimeout(() => document.getElementById('toast')?.remove(), 3000);</script>
+    {% endif %}
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

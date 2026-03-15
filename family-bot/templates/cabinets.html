@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Кабинеты — WB Review Bot{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Кабинеты WB</h1>
+        <button onclick="document.getElementById('add-form').classList.toggle('hidden')" class="bg-wb-500 hover:bg-wb-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            + Добавить кабинет
+        </button>
+    </div>
+
+    <!-- Add form -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6 hidden" id="add-form">
+        <h3 class="font-semibold text-gray-900 mb-4">Новый кабинет</h3>
+        <form action="/api/cabinets/add" method="post" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Название</label>
+                <input type="text" name="name" required placeholder="ИП Иванов" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500 focus:border-transparent">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">API-ключ WB</label>
+                <input type="password" name="api_key" required placeholder="eyJhbGci..." class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-wb-500 focus:border-transparent">
+                <p class="text-xs text-gray-400 mt-1">Кабинет продавца → Настройки → Доступ к API → токен "Вопросы и отзывы"</p>
+            </div>
+            <button class="bg-wb-500 hover:bg-wb-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Добавить</button>
+        </form>
+    </div>
+
+    <!-- Cabinet list -->
+    <div class="space-y-4">
+        {% for c in cabinets %}
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="w-3 h-3 rounded-full {{ 'bg-green-400' if c.is_active else 'bg-gray-300' }}"></span>
+                    <div>
+                        <div class="font-semibold text-gray-900">{{ c.name }} <span class="text-gray-400 font-normal text-sm">#{{ c.id }}</span></div>
+                        <div class="text-xs text-gray-400">{{ c.created_at[:10] if c.created_at else '' }}</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 text-sm text-gray-500">
+                    <span>{{ c.pending_reviews }} ожид.</span>
+                    <span>{{ c.sent_reviews }} отпр.</span>
+                    <div class="flex gap-2">
+                        <form action="/api/cabinets/{{ c.id }}/toggle" method="post" class="inline">
+                            <button class="px-3 py-1 rounded text-xs {{ 'bg-red-50 text-red-600 hover:bg-red-100' if c.is_active else 'bg-green-50 text-green-600 hover:bg-green-100' }} transition">
+                                {{ 'Выкл' if c.is_active else 'Вкл' }}
+                            </button>
+                        </form>
+                        <form action="/api/cabinets/{{ c.id }}/delete" method="post" class="inline" onsubmit="return confirm('Удалить кабинет «{{ c.name }}» и все его данные (отзывы, вопросы)?')">
+                            <button class="px-3 py-1 rounded text-xs bg-red-50 text-red-600 hover:bg-red-200 transition">Удалить</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

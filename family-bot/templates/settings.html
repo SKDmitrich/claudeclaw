@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Настройки — WB Review Bot{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Настройки</h1>
+
+    <form action="/api/settings" method="post">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Auto-reply -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 class="font-semibold text-gray-900 mb-4">Автоответы</h2>
+                <div class="space-y-3">
+                    {% for key, label in [
+                        ('auto_reply_enabled', 'Автоответы включены'),
+                        ('auto_reply_positive', 'На позитивные (4-5 ★)'),
+                        ('auto_reply_negative', 'На негативные (1-3 ★)'),
+                        ('auto_reply_questions', 'На вопросы'),
+                        ('require_approval', 'Требовать одобрение'),
+                    ] %}
+                    <label class="flex items-center justify-between py-1">
+                        <span class="text-sm text-gray-700">{{ label }}</span>
+                        <input type="checkbox" name="{{ key }}" {{ 'checked' if settings[key] }} class="w-4 h-4 text-wb-500 rounded focus:ring-wb-500">
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- AI Settings -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 class="font-semibold text-gray-900 mb-4">AI</h2>
+                <div class="space-y-4">
+                    <label class="flex items-center justify-between">
+                        <span class="text-sm text-gray-700">AI включён</span>
+                        <input type="checkbox" name="ai_enabled" {{ 'checked' if settings.ai_enabled }} class="w-4 h-4 text-wb-500 rounded focus:ring-wb-500">
+                    </label>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Тон</label>
+                        <select name="ai_tone" id="tone-select" onchange="toggleCustomPrompt()" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500">
+                            <option value="friendly" {{ 'selected' if settings.ai_tone == 'friendly' }}>Дружелюбный</option>
+                            <option value="formal" {{ 'selected' if settings.ai_tone == 'formal' }}>Формальный</option>
+                            <option value="casual" {{ 'selected' if settings.ai_tone == 'casual' }}>Неформальный</option>
+                            <option value="custom" {{ 'selected' if settings.ai_tone == 'custom' }}>Свой стиль</option>
+                        </select>
+                    </div>
+
+                    <div id="custom-prompt-block" class="{{ '' if settings.ai_tone == 'custom' else 'hidden' }}">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Инструкция для AI</label>
+                        <textarea name="ai_custom_prompt" rows="4" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500" placeholder="Отвечай стихами...">{{ settings.ai_custom_prompt or '' }}</textarea>
+                        <p class="text-xs text-gray-400 mt-1">Напишите как AI должен отвечать. Например: "Отвечай стихами", "Всегда предлагай скидку 10%"</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Макс. длина ответа (символов)</label>
+                        <input type="number" name="ai_max_length" value="{{ settings.ai_max_length }}" min="100" max="2000" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 class="font-semibold text-gray-900 mb-4">Уведомления</h2>
+                <div class="space-y-3">
+                    <label class="flex items-center justify-between py-1">
+                        <span class="text-sm text-gray-700">Новые отзывы</span>
+                        <input type="checkbox" name="notify_new_reviews" {{ 'checked' if settings.notify_new_reviews }} class="w-4 h-4 text-wb-500 rounded focus:ring-wb-500">
+                    </label>
+                    <label class="flex items-center justify-between py-1">
+                        <span class="text-sm text-gray-700">Новые вопросы</span>
+                        <input type="checkbox" name="notify_new_questions" {{ 'checked' if settings.notify_new_questions }} class="w-4 h-4 text-wb-500 rounded focus:ring-wb-500">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Stop Words -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 class="font-semibold text-gray-900 mb-4">Стоп-слова</h2>
+                <p class="text-xs text-gray-500 mb-3">Если в тексте отзыва встречается одно из этих слов, отзыв автоматически отправляется на проверку и не будет отправлен без ручного одобрения.</p>
+                <div id="stop-words-list" class="flex flex-wrap gap-2 mb-3">
+                    {% for word in settings.get('stop_words', []) %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 text-red-700 text-sm border border-red-200">
+                        {{ word }}
+                        <button type="button" onclick="removeStopWord(this)" class="text-red-400 hover:text-red-600 ml-0.5">&times;</button>
+                    </span>
+                    {% endfor %}
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="new-stop-word" placeholder="Новое слово..." class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500 focus:border-transparent"
+                        onkeydown="if(event.key==='Enter'){event.preventDefault();addStopWord();}">
+                    <button type="button" onclick="addStopWord()" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition">Добавить</button>
+                </div>
+                <input type="hidden" name="stop_words" id="stop-words-input" value="{{ settings.get('stop_words', [])|join(',') }}">
+            </div>
+
+            <!-- Interval -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 class="font-semibold text-gray-900 mb-4">Синхронизация</h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Интервал проверки (минуты)</label>
+                    <input type="number" name="check_interval_minutes" value="{{ settings.check_interval_minutes }}" min="1" max="120" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500">
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6">
+            <button class="bg-wb-500 hover:bg-wb-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition">Сохранить настройки</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleCustomPrompt() {
+    const sel = document.getElementById('tone-select');
+    const block = document.getElementById('custom-prompt-block');
+    block.classList.toggle('hidden', sel.value !== 'custom');
+}
+
+function syncStopWords() {
+    const tags = document.querySelectorAll('#stop-words-list span');
+    const words = Array.from(tags).map(t => t.textContent.trim().replace('×', '').trim());
+    document.getElementById('stop-words-input').value = words.join(',');
+}
+
+function addStopWord() {
+    const input = document.getElementById('new-stop-word');
+    const word = input.value.trim().toLowerCase();
+    if (!word) return;
+
+    const list = document.getElementById('stop-words-list');
+    const existing = Array.from(list.querySelectorAll('span')).map(s => s.textContent.trim().replace('×', '').trim().toLowerCase());
+    if (existing.includes(word)) { input.value = ''; return; }
+
+    const tag = document.createElement('span');
+    tag.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 text-red-700 text-sm border border-red-200';
+    tag.innerHTML = `${word}<button type="button" onclick="removeStopWord(this)" class="text-red-400 hover:text-red-600 ml-0.5">&times;</button>`;
+    list.appendChild(tag);
+    input.value = '';
+    syncStopWords();
+}
+
+function removeStopWord(btn) {
+    btn.parentElement.remove();
+    syncStopWords();
+}
+</script>
+{% endblock %}

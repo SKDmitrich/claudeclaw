@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+{% block title %}Отзывы — WB Review Bot{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="flex flex-wrap items-center justify-between mb-4 gap-3">
+        <h1 class="text-2xl font-bold text-gray-900">Отзывы</h1>
+        <div class="flex gap-2">
+            <a href="/reviews?status=pending" class="px-3 py-1.5 rounded-lg text-sm {{ 'bg-wb-500 text-white' if status == 'pending' else 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">Ожидают</a>
+            <a href="/reviews?status=flagged" class="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 {{ 'bg-amber-500 text-white' if status == 'flagged' else 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                На проверке{{ ' (' + flagged_count|string + ')' if flagged_count else '' }}
+            </a>
+            <a href="/reviews?status=sent" class="px-3 py-1.5 rounded-lg text-sm {{ 'bg-wb-500 text-white' if status == 'sent' else 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">Отправлены</a>
+            <a href="/reviews?status=all" class="px-3 py-1.5 rounded-lg text-sm {{ 'bg-wb-500 text-white' if status == 'all' else 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">Все</a>
+        </div>
+    </div>
+
+    <!-- Actions bar -->
+    <div class="bg-white rounded-xl border border-gray-200 p-3 mb-4 flex flex-wrap items-center gap-2">
+        {% if status == 'pending' and reviews %}
+        <button onclick="toggleSelectMode()" id="btn-select"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border border-gray-200 text-gray-700 hover:bg-gray-50 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            Выбрать
+        </button>
+        <button onclick="selectAll()" id="btn-select-all" class="hidden px-3 py-1.5 rounded-lg text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+            Выбрать все
+        </button>
+        <div class="w-px h-6 bg-gray-200 mx-1"></div>
+        <button onclick="bulkGenerate()" id="btn-bulk-generate"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-blue-500 hover:bg-blue-600 text-white transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span id="generate-label">Сгенерировать все</span>
+        </button>
+        <button onclick="bulkSend()" id="btn-bulk-send"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-green-500 hover:bg-green-600 text-white transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+            <span id="send-label">Отправить все</span>
+        </button>
+        <span id="bulk-status" class="text-sm text-gray-500 ml-2"></span>
+        <div class="w-px h-6 bg-gray-200 mx-1"></div>
+        {% endif %}
+
+        <!-- Rating filter dropdown -->
+        <div class="relative" id="rating-filter-wrapper">
+            <button onclick="document.getElementById('rating-dropdown').classList.toggle('hidden')"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border {{ 'border-amber-300 bg-amber-50 text-amber-700' if current_ratings else 'border-gray-200 text-gray-700' }} hover:bg-gray-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                {% if current_ratings %}{{ current_ratings|join('★, ') }}★{% else %}Все звезды{% endif %}
+                <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div id="rating-dropdown" class="hidden absolute left-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-2 px-1">
+                {% for r in range(5, 0, -1) %}
+                <label class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" class="rounded border-gray-300 text-amber-500 focus:ring-amber-400 rating-cb" value="{{ r }}"
+                        {{ 'checked' if r in current_ratings }}>
+                    <span class="flex items-center gap-1 text-sm text-gray-700">
+                        {% for i in range(r) %}<span class="star text-sm">★</span>{% endfor %}{% for i in range(5 - r) %}<span class="text-gray-200 text-sm">★</span>{% endfor %}
+                        <span class="text-gray-400 text-xs ml-1">({{ r }})</span>
+                    </span>
+                </label>
+                {% endfor %}
+                <div class="border-t border-gray-100 mt-1 pt-1 px-1 flex gap-1">
+                    <button onclick="applyRatingFilter()" class="flex-1 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg hover:bg-gray-800 transition">Применить</button>
+                    <button onclick="clearRatingFilter()" class="px-3 py-1.5 text-gray-500 text-xs rounded-lg hover:bg-gray-100 transition">Сбросить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if not reviews %}
+    <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+        <div class="text-gray-400 text-lg">Нет отзывов</div>
+    </div>
+    {% endif %}
+
+    <div class="space-y-4" id="reviews-list">
+        {% for r in reviews %}
+        <div class="bg-white rounded-xl border border-gray-200 p-5 fade-in" id="review-{{ r.id }}"
+             data-id="{{ r.id }}" data-status="{{ r.reply_status }}" data-has-reply="{{ 'yes' if r.reply_text else 'no' }}">
+            <div class="flex items-start gap-3">
+                <!-- Checkbox (hidden by default) -->
+                <div class="review-checkbox hidden flex items-center pt-1">
+                    <input type="checkbox" class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" data-review-id="{{ r.id }}" onchange="updateBulkLabels()">
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-start justify-between mb-3">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                {% if r.needs_review %}
+                                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium flex items-center gap-1" title="{{ r.review_flag_reason }}">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01"/></svg>
+                                    Проверить
+                                </span>
+                                {% endif %}
+                                {% if r.cabinet_name %}<span class="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded font-medium">{{ r.cabinet_name }}</span>{% endif %}
+                                <span class="text-sm font-medium text-gray-900">{{ r.product_name[:50] }}</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm text-gray-500">
+                                <span>{{ r.user_name }}</span>
+                                <span>{{ r.created_at[:10] if r.created_at else '' }}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            {% for i in range(5) %}
+                            <span class="text-lg {{ 'star' if i < r.rating else 'text-gray-200' }}">★</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {% if r.text %}
+                    <p class="text-gray-700 text-sm mb-3 leading-relaxed">{{ r.text[:500] }}</p>
+                    {% else %}
+                    <p class="text-gray-400 text-sm italic mb-3">(без текста)</p>
+                    {% endif %}
+
+                    {% if r.needs_review and r.review_flag_reason %}
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 text-sm text-amber-700 flex items-center justify-between gap-2">
+                        <div class="flex items-start gap-2">
+                            <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                            {{ r.review_flag_reason }}
+                        </div>
+                        <form action="/api/reviews/{{ r.id }}/approve-flag" method="post" class="shrink-0">
+                            <button class="px-2.5 py-1 rounded text-xs bg-amber-200 text-amber-800 hover:bg-amber-300 transition">Снять флаг</button>
+                        </form>
+                    </div>
+                    {% endif %}
+
+                    {% if r.reply_text %}
+                    <div class="bg-gray-50 rounded-lg p-3 mb-3 border-l-3 border-wb-500">
+                        <div class="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                            {% if r.ai_generated %}<span class="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-xs">AI</span>{% endif %}
+                            <span>{{ r.reply_status }}</span>
+                        </div>
+                        <p class="text-sm text-gray-700">{{ r.reply_text[:400] }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if r.reply_status == 'pending' %}
+                    <div class="flex gap-2">
+                        {% if r.reply_text %}
+                        <form action="/api/reviews/{{ r.id }}/send" method="post" class="inline">
+                            <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm transition">Отправить</button>
+                        </form>
+                        {% endif %}
+                        <button onclick="generateReply('{{ r.id }}')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm transition">
+                            {{ 'Перегенерить' if r.reply_text else 'Сгенерировать' }}
+                        </button>
+                        <button onclick="showEditForm('{{ r.id }}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm transition">Написать</button>
+                        <form action="/api/reviews/{{ r.id }}/skip" method="post" class="inline">
+                            <button class="text-gray-400 hover:text-gray-600 px-3 py-1.5 text-sm transition">Пропустить</button>
+                        </form>
+                    </div>
+                    <form action="/api/reviews/{{ r.id }}/reply" method="post" class="mt-3 hidden" id="edit-form-{{ r.id }}">
+                        <textarea name="reply_text" rows="3" class="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-wb-500 focus:border-transparent" placeholder="Текст ответа...">{{ r.reply_text or '' }}</textarea>
+                        <button class="mt-2 bg-wb-500 hover:bg-wb-600 text-white px-4 py-1.5 rounded-lg text-sm transition">Сохранить</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectMode = false;
+
+function showEditForm(id) {
+    const form = document.getElementById('edit-form-' + id);
+    form.classList.toggle('hidden');
+    if (!form.classList.contains('hidden')) form.querySelector('textarea').focus();
+}
+
+async function generateReply(id) {
+    const btn = event.target;
+    btn.textContent = 'Генерирую...';
+    btn.disabled = true;
+    try {
+        const resp = await fetch('/api/reviews/' + id + '/generate', { method: 'POST' });
+        if (resp.ok) location.reload();
+        else alert('Ошибка генерации');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function toggleSelectMode() {
+    selectMode = !selectMode;
+    const btn = document.getElementById('btn-select');
+    const btnAll = document.getElementById('btn-select-all');
+    const checkboxes = document.querySelectorAll('.review-checkbox');
+
+    if (selectMode) {
+        btn.classList.add('bg-blue-50', 'border-blue-300', 'text-blue-700');
+        btn.classList.remove('text-gray-700');
+        btnAll.classList.remove('hidden');
+        checkboxes.forEach(cb => cb.classList.remove('hidden'));
+    } else {
+        btn.classList.remove('bg-blue-50', 'border-blue-300', 'text-blue-700');
+        btn.classList.add('text-gray-700');
+        btnAll.classList.add('hidden');
+        checkboxes.forEach(cb => {
+            cb.classList.add('hidden');
+            cb.querySelector('input').checked = false;
+        });
+    }
+    updateBulkLabels();
+}
+
+function selectAll() {
+    const checkboxes = document.querySelectorAll('.review-checkbox input');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+    updateBulkLabels();
+}
+
+function getSelectedIds() {
+    if (!selectMode) return null; // null = all
+    return Array.from(document.querySelectorAll('.review-checkbox input:checked')).map(cb => cb.dataset.reviewId);
+}
+
+function getIdsForGenerate() {
+    const selected = getSelectedIds();
+    if (selected === null) {
+        // All without reply
+        return Array.from(document.querySelectorAll('[data-status="pending"][data-has-reply="no"]')).map(el => el.dataset.id);
+    }
+    return selected;
+}
+
+function getIdsForSend() {
+    const selected = getSelectedIds();
+    if (selected === null) {
+        // All with reply ready
+        return Array.from(document.querySelectorAll('[data-status="pending"][data-has-reply="yes"]')).map(el => el.dataset.id);
+    }
+    return selected.filter(id => {
+        const el = document.querySelector(`[data-id="${id}"]`);
+        return el && el.dataset.hasReply === 'yes';
+    });
+}
+
+function updateBulkLabels() {
+    const genLabel = document.getElementById('generate-label');
+    const sendLabel = document.getElementById('send-label');
+    if (!genLabel) return;
+
+    if (selectMode) {
+        const checked = document.querySelectorAll('.review-checkbox input:checked').length;
+        genLabel.textContent = checked > 0 ? `Сгенерировать (${checked})` : 'Сгенерировать';
+        sendLabel.textContent = checked > 0 ? `Отправить (${checked})` : 'Отправить';
+    } else {
+        const noReply = document.querySelectorAll('[data-status="pending"][data-has-reply="no"]').length;
+        const hasReply = document.querySelectorAll('[data-status="pending"][data-has-reply="yes"]').length;
+        genLabel.textContent = `Сгенерировать все (${noReply})`;
+        sendLabel.textContent = `Отправить все (${hasReply})`;
+    }
+}
+
+async function bulkGenerate() {
+    const ids = getIdsForGenerate();
+    if (!ids || ids.length === 0) {
+        alert('Нет отзывов для генерации');
+        return;
+    }
+    if (!confirm(`Сгенерировать ответы для ${ids.length} отзывов?`)) return;
+
+    const status = document.getElementById('bulk-status');
+    const btn = document.getElementById('btn-bulk-generate');
+    btn.disabled = true;
+    status.textContent = `Генерация 0/${ids.length}...`;
+
+    let done = 0;
+    // Process in batches of 3
+    for (let i = 0; i < ids.length; i += 3) {
+        const batch = ids.slice(i, i + 3);
+        await Promise.all(batch.map(async id => {
+            try {
+                await fetch('/api/reviews/' + id + '/generate', { method: 'POST' });
+            } catch(e) {}
+            done++;
+            status.textContent = `Генерация ${done}/${ids.length}...`;
+        }));
+    }
+    status.textContent = `Готово! Сгенерировано: ${done}`;
+    btn.disabled = false;
+    setTimeout(() => location.reload(), 1000);
+}
+
+async function bulkSend() {
+    const ids = getIdsForSend();
+    if (!ids || ids.length === 0) {
+        alert('Нет отзывов для отправки');
+        return;
+    }
+    if (!confirm(`Отправить ${ids.length} ответов на WB?`)) return;
+
+    const status = document.getElementById('bulk-status');
+    const btn = document.getElementById('btn-bulk-send');
+    btn.disabled = true;
+    status.textContent = `Отправка...`;
+
+    try {
+        const resp = await fetch('/api/reviews/bulk/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+        });
+        const data = await resp.json();
+        status.textContent = `Отправлено: ${data.ok}, ошибок: ${data.errors}`;
+    } catch(e) {
+        status.textContent = 'Ошибка отправки';
+    }
+    btn.disabled = false;
+    setTimeout(() => location.reload(), 1500);
+}
+
+// Rating filter
+function applyRatingFilter() {
+    const checked = Array.from(document.querySelectorAll('.rating-cb:checked')).map(cb => cb.value);
+    const url = new URL(window.location);
+    if (checked.length > 0 && checked.length < 5) {
+        url.searchParams.set('rating', checked.join(','));
+    } else {
+        url.searchParams.delete('rating');
+    }
+    window.location = url.toString();
+}
+
+function clearRatingFilter() {
+    const url = new URL(window.location);
+    url.searchParams.delete('rating');
+    window.location = url.toString();
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', function(e) {
+    const wrapper = document.getElementById('rating-filter-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        document.getElementById('rating-dropdown').classList.add('hidden');
+    }
+});
+
+// Init labels on load
+document.addEventListener('DOMContentLoaded', updateBulkLabels);
+</script>
+{% endblock %}

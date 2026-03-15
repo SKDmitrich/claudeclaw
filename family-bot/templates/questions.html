@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Вопросы — WB Review Bot{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <h1 class="text-2xl font-bold text-gray-900 mb-4">Вопросы</h1>
+
+    {% if questions %}
+    <!-- Bulk actions bar -->
+    <div class="bg-white rounded-xl border border-gray-200 p-3 mb-4 flex flex-wrap items-center gap-2">
+        <button onclick="toggleSelectMode()" id="btn-select"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border border-gray-200 text-gray-700 hover:bg-gray-50 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            Выбрать
+        </button>
+        <button onclick="selectAll()" id="btn-select-all" class="hidden px-3 py-1.5 rounded-lg text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+            Выбрать все
+        </button>
+        <div class="w-px h-6 bg-gray-200 mx-1"></div>
+        <button onclick="bulkGenerate()" id="btn-bulk-generate"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-blue-500 hover:bg-blue-600 text-white transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span id="generate-label">Сгенерировать все</span>
+        </button>
+        <button onclick="bulkSend()" id="btn-bulk-send"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-green-500 hover:bg-green-600 text-white transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+            <span id="send-label">Отправить все</span>
+        </button>
+        <span id="bulk-status" class="text-sm text-gray-500 ml-2"></span>
+    </div>
+    {% endif %}
+
+    {% if not questions %}
+    <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+        <div class="text-gray-400 text-lg">Нет вопросов, ожидающих ответа</div>
+    </div>
+    {% endif %}
+
+    <div class="space-y-4" id="questions-list">
+        {% for q in questions %}
+        <div class="bg-white rounded-xl border border-gray-200 p-5 fade-in" id="question-{{ q.id }}"
+             data-id="{{ q.id }}" data-status="{{ q.answer_status }}" data-has-answer="{{ 'yes' if q.answer_text else 'no' }}">
+            <div class="flex items-start gap-3">
+                <div class="question-checkbox hidden flex items-center pt-1">
+                    <input type="checkbox" class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" data-question-id="{{ q.id }}" onchange="updateBulkLabels()">
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                        {% if q.cabinet_name %}<span class="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded font-medium">{{ q.cabinet_name }}</span>{% endif %}
+                        <span class="text-sm font-medium text-gray-900">{{ q.product_name[:50] }}</span>
+                        <span class="text-xs text-gray-400">{{ q.created_at[:10] if q.created_at else '' }}</span>
+                    </div>
+
+                    <p class="text-gray-700 text-sm mb-3 leading-relaxed">{{ q.question_text[:500] }}</p>
+
+                    {% if q.answer_text %}
+                    <div class="bg-gray-50 rounded-lg p-3 mb-3">
+                        <div class="text-xs text-gray-500 mb-1">
+                            {% if q.ai_generated %}<span class="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-xs">AI</span>{% endif %}
+                            {{ q.answer_status }}
+                        </div>
+                        <p class="text-sm text-gray-700">{{ q.answer_text[:400] }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if q.answer_status == 'pending' %}
+                    <div class="flex gap-2">
+                        {% if q.answer_text %}
+                        <form action="/api/questions/{{ q.id }}/send" method="post" class="inline">
+                            <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm transition">Отправить</button>
+                        </form>
+                        {% endif %}
+                        <button onclick="genQ('{{ q.id }}')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm transition">Сгенерировать</button>
+                        <button onclick="document.getElementById('qform-{{ q.id }}').classList.toggle('hidden')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm transition">Написать</button>
+                    </div>
+                    <form action="/api/questions/{{ q.id }}/reply" method="post" class="mt-3 hidden" id="qform-{{ q.id }}">
+                        <textarea name="answer_text" rows="3" class="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-wb-500 focus:border-transparent" placeholder="Текст ответа...">{{ q.answer_text or '' }}</textarea>
+                        <button class="mt-2 bg-wb-500 hover:bg-wb-600 text-white px-4 py-1.5 rounded-lg text-sm transition">Сохранить</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectMode = false;
+
+async function genQ(id) {
+    event.target.textContent = 'Генерирую...';
+    event.target.disabled = true;
+    const resp = await fetch('/api/questions/' + id + '/generate', { method: 'POST' });
+    if (resp.ok) location.reload();
+    else alert('Ошибка');
+}
+
+function toggleSelectMode() {
+    selectMode = !selectMode;
+    const btn = document.getElementById('btn-select');
+    const btnAll = document.getElementById('btn-select-all');
+    const checkboxes = document.querySelectorAll('.question-checkbox');
+
+    if (selectMode) {
+        btn.classList.add('bg-blue-50', 'border-blue-300', 'text-blue-700');
+        btn.classList.remove('text-gray-700');
+        btnAll.classList.remove('hidden');
+        checkboxes.forEach(cb => cb.classList.remove('hidden'));
+    } else {
+        btn.classList.remove('bg-blue-50', 'border-blue-300', 'text-blue-700');
+        btn.classList.add('text-gray-700');
+        btnAll.classList.add('hidden');
+        checkboxes.forEach(cb => {
+            cb.classList.add('hidden');
+            cb.querySelector('input').checked = false;
+        });
+    }
+    updateBulkLabels();
+}
+
+function selectAll() {
+    const checkboxes = document.querySelectorAll('.question-checkbox input');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+    updateBulkLabels();
+}
+
+function getSelectedIds() {
+    if (!selectMode) return null;
+    return Array.from(document.querySelectorAll('.question-checkbox input:checked')).map(cb => cb.dataset.questionId);
+}
+
+function getIdsForGenerate() {
+    const selected = getSelectedIds();
+    if (selected === null) {
+        return Array.from(document.querySelectorAll('[data-status="pending"][data-has-answer="no"]')).map(el => el.dataset.id);
+    }
+    return selected;
+}
+
+function getIdsForSend() {
+    const selected = getSelectedIds();
+    if (selected === null) {
+        return Array.from(document.querySelectorAll('[data-status="pending"][data-has-answer="yes"]')).map(el => el.dataset.id);
+    }
+    return selected.filter(id => {
+        const el = document.querySelector(`[data-id="${id}"]`);
+        return el && el.dataset.hasAnswer === 'yes';
+    });
+}
+
+function updateBulkLabels() {
+    const genLabel = document.getElementById('generate-label');
+    const sendLabel = document.getElementById('send-label');
+    if (!genLabel) return;
+
+    if (selectMode) {
+        const checked = document.querySelectorAll('.question-checkbox input:checked').length;
+        genLabel.textContent = checked > 0 ? `Сгенерировать (${checked})` : 'Сгенерировать';
+        sendLabel.textContent = checked > 0 ? `Отправить (${checked})` : 'Отправить';
+    } else {
+        const noAnswer = document.querySelectorAll('[data-status="pending"][data-has-answer="no"]').length;
+        const hasAnswer = document.querySelectorAll('[data-status="pending"][data-has-answer="yes"]').length;
+        genLabel.textContent = `Сгенерировать все (${noAnswer})`;
+        sendLabel.textContent = `Отправить все (${hasAnswer})`;
+    }
+}
+
+async function bulkGenerate() {
+    const ids = getIdsForGenerate();
+    if (!ids || ids.length === 0) { alert('Нет вопросов для генерации'); return; }
+    if (!confirm(`Сгенерировать ответы для ${ids.length} вопросов?`)) return;
+
+    const status = document.getElementById('bulk-status');
+    const btn = document.getElementById('btn-bulk-generate');
+    btn.disabled = true;
+    status.textContent = `Генерация 0/${ids.length}...`;
+
+    let done = 0;
+    for (let i = 0; i < ids.length; i += 3) {
+        const batch = ids.slice(i, i + 3);
+        await Promise.all(batch.map(async id => {
+            try { await fetch('/api/questions/' + id + '/generate', { method: 'POST' }); } catch(e) {}
+            done++;
+            status.textContent = `Генерация ${done}/${ids.length}...`;
+        }));
+    }
+    status.textContent = `Готово! Сгенерировано: ${done}`;
+    btn.disabled = false;
+    setTimeout(() => location.reload(), 1000);
+}
+
+async function bulkSend() {
+    const ids = getIdsForSend();
+    if (!ids || ids.length === 0) { alert('Нет вопросов для отправки'); return; }
+    if (!confirm(`Отправить ${ids.length} ответов на WB?`)) return;
+
+    const status = document.getElementById('bulk-status');
+    const btn = document.getElementById('btn-bulk-send');
+    btn.disabled = true;
+    status.textContent = 'Отправка...';
+
+    try {
+        const resp = await fetch('/api/questions/bulk/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+        });
+        const data = await resp.json();
+        status.textContent = `Отправлено: ${data.ok}, ошибок: ${data.errors}`;
+    } catch(e) {
+        status.textContent = 'Ошибка отправки';
+    }
+    btn.disabled = false;
+    setTimeout(() => location.reload(), 1500);
+}
+
+document.addEventListener('DOMContentLoaded', updateBulkLabels);
+</script>
+{% endblock %}

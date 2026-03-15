@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Пользователи — WB Review Bot{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Пользователи</h1>
+        <button onclick="document.getElementById('add-form').classList.toggle('hidden')" class="bg-wb-500 hover:bg-wb-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            + Добавить
+        </button>
+    </div>
+
+    <!-- Flash messages -->
+    {% set flash = request.query_params.get('flash', '') %}
+    {% if flash == 'exists' %}
+    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">Пользователь с таким логином уже существует</div>
+    {% elif flash == 'added' %}
+    <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm">Пользователь добавлен</div>
+    {% elif flash == 'email_sent' %}
+    <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm">Пользователь добавлен, данные отправлены на почту</div>
+    {% elif flash == 'added_no_email' %}
+    <div class="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-lg mb-4 text-sm">Пользователь добавлен, но письмо не отправлено (проверьте SMTP-настройки в .env)</div>
+    {% endif %}
+
+    <!-- Add form -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6 hidden" id="add-form">
+        <h3 class="font-semibold text-gray-900 mb-4">Новый пользователь</h3>
+        <form action="/api/users/add" method="post" class="space-y-4" id="add-user-form">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" name="email" placeholder="user@company.ru" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500 focus:border-transparent"
+                           oninput="autoFillUsername(this)">
+                    <p class="text-xs text-gray-400 mt-1">На эту почту придут логин и пароль</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Имя</label>
+                    <input type="text" name="display_name" placeholder="Иван Иванов" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500 focus:border-transparent">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Логин</label>
+                    <input type="text" name="username" id="add-username" placeholder="автоматически из email" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500 focus:border-transparent">
+                    <p class="text-xs text-gray-400 mt-1">Заполнится автоматически</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
+                    <input type="text" name="password" placeholder="сгенерируется автоматически" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500 focus:border-transparent">
+                    <p class="text-xs text-gray-400 mt-1">Оставьте пустым для автогенерации</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Роль</label>
+                    <select name="role" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500 focus:border-transparent" onchange="togglePermissions(this, 'add')">
+                        <option value="admin">Админ (все доступы)</option>
+                        <option value="editor">Редактор</option>
+                        <option value="viewer" selected>Просмотр</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Permissions -->
+            <div id="add-permissions">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Доступы</label>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                    {% for key, label in all_permissions %}
+                    <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer text-sm">
+                        <input type="checkbox" name="{{ key }}" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 perm-checkbox-add"
+                            {{ 'checked' if key in ('view_dashboard', 'view_reviews') }}>
+                        <span class="text-gray-700">{{ label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <button class="bg-wb-500 hover:bg-wb-600 text-white px-5 py-2 rounded-lg text-sm font-medium transition">Добавить пользователя</button>
+        </form>
+    </div>
+
+    <!-- User list -->
+    <div class="space-y-4">
+        {% for u in users %}
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-medium">
+                        {{ u.display_name[0]|upper if u.display_name else u.username[0]|upper }}
+                    </div>
+                    <div>
+                        <div class="font-semibold text-gray-900">{{ u.display_name or u.username }}</div>
+                        <div class="text-xs text-gray-400">
+                            {{ u.username }}
+                            {% if u.email %} · {{ u.email }}{% endif %}
+                            · {{ u.created_at[:10] if u.created_at else '' }}
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded text-xs font-medium
+                        {% if u.role == 'admin' %}bg-purple-50 text-purple-600
+                        {% elif u.role == 'editor' %}bg-blue-50 text-blue-600
+                        {% else %}bg-gray-100 text-gray-500{% endif %}">
+                        {% if u.role == 'admin' %}Админ{% elif u.role == 'editor' %}Редактор{% else %}Просмотр{% endif %}
+                    </span>
+                    <!-- Permission badges -->
+                    {% set perms = u.permissions if u.permissions is mapping else {} %}
+                    {% set active_count = perms.values()|select|list|length %}
+                    <span class="text-xs text-gray-400">{{ active_count }}/{{ all_permissions|length }} доступов</span>
+
+                    <button onclick="toggleEdit({{ u.id }})" class="px-3 py-1 rounded text-xs bg-gray-100 text-gray-600 hover:bg-gray-200 transition">Изменить</button>
+                    <form action="/api/users/{{ u.id }}/delete" method="post" class="inline" onsubmit="return confirm('Удалить пользователя «{{ u.display_name or u.username }}»?')">
+                        <button class="px-3 py-1 rounded text-xs bg-red-50 text-red-600 hover:bg-red-200 transition">Удалить</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Edit form (hidden) -->
+            <div id="edit-{{ u.id }}" class="hidden mt-4 pt-4 border-t border-gray-100">
+                <form action="/api/users/{{ u.id }}/update" method="post" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Имя</label>
+                            <input type="text" name="display_name" value="{{ u.display_name or '' }}" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                            <input type="email" name="email" value="{{ u.email or '' }}" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Роль</label>
+                            <select name="role" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500 focus:border-transparent" onchange="togglePermissions(this, '{{ u.id }}')">
+                                <option value="admin" {{ 'selected' if u.role == 'admin' }}>Админ</option>
+                                <option value="editor" {{ 'selected' if u.role == 'editor' }}>Редактор</option>
+                                <option value="viewer" {{ 'selected' if u.role == 'viewer' }}>Просмотр</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Новый пароль</label>
+                            <input type="password" name="password" placeholder="оставьте пустым" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wb-500 focus:border-transparent">
+                        </div>
+                    </div>
+                    <!-- Permissions -->
+                    <div id="permissions-{{ u.id }}">
+                        <label class="block text-xs font-medium text-gray-500 mb-2">Доступы</label>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                            {% set perms = u.permissions if u.permissions is mapping else {} %}
+                            {% for key, label in all_permissions %}
+                            <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer text-sm">
+                                <input type="checkbox" name="{{ key }}" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 perm-checkbox-{{ u.id }}"
+                                    {{ 'checked' if perms.get(key) or u.role == 'admin' }}>
+                                <span class="text-gray-700">{{ label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <button class="bg-wb-500 hover:bg-wb-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition">Сохранить</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+        {% if not users %}
+        <div class="text-center text-gray-400 py-12">Пользователей пока нет. Авторизация через переменные окружения.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleEdit(id) {
+    document.getElementById('edit-' + id).classList.toggle('hidden');
+}
+
+function autoFillUsername(emailInput) {
+    const usernameInput = document.getElementById('add-username');
+    if (!usernameInput.dataset.manual) {
+        const email = emailInput.value;
+        if (email.includes('@')) {
+            usernameInput.value = email.split('@')[0];
+        }
+    }
+}
+
+// Mark username as manually edited
+document.addEventListener('DOMContentLoaded', function() {
+    const u = document.getElementById('add-username');
+    if (u) u.addEventListener('input', function() { this.dataset.manual = '1'; });
+});
+
+function togglePermissions(select, ctx) {
+    const isAdmin = select.value === 'admin';
+    const checkboxes = document.querySelectorAll('.perm-checkbox-' + ctx);
+    checkboxes.forEach(cb => {
+        cb.checked = isAdmin ? true : cb.checked;
+        cb.disabled = isAdmin;
+    });
+}
+</script>
+{% endblock %}
