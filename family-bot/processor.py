@@ -134,9 +134,36 @@ class ReviewProcessor:
     async def _try_auto_reply_review(self, review: dict, settings: dict, cab_id: int, cab_name: str):
         rating = review.get("rating", 0)
 
-        if rating >= 4 and not settings.get("auto_reply_positive"):
+        # Check per-rating settings (new granular approach)
+        active_ratings = settings.get("auto_reply_ratings")
+        if active_ratings is not None:
+            if rating not in active_ratings:
+                return
+        else:
+            # Legacy fallback
+            if rating >= 4 and not settings.get("auto_reply_positive"):
+                return
+            if rating <= 3 and not settings.get("auto_reply_negative"):
+                return
+
+        # Check text filters
+        review_text = review.get("text", "") or ""
+        if settings.get("auto_reply_only_with_text") and not review_text.strip():
             return
-        if rating <= 3 and not settings.get("auto_reply_negative"):
+
+        min_len = settings.get("auto_reply_min_text_length", 0)
+        if min_len > 0 and len(review_text.strip()) < min_len:
+            return
+
+        # Check photo filter
+        photos = review.get("photos", [])
+        if isinstance(photos, str):
+            import json as _json
+            try:
+                photos = _json.loads(photos)
+            except Exception:
+                photos = []
+        if settings.get("auto_reply_skip_with_photos") and photos:
             return
 
         rule_reply = self._match_keyword_rule(review, cab_id)

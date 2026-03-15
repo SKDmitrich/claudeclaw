@@ -25,6 +25,7 @@ from database import (
     get_cabinet_stats_summary, get_recent_activity, log_activity,
     get_products_with_reviews, get_reviews_for_product, get_top_products_by_reviews, get_categories,
     get_users, get_user, add_user, update_user, delete_user, verify_user,
+    get_rating_decline_products,
 )
 from wb_api import WBClient, get_wb_client
 from ai_engine import ai_engine
@@ -90,6 +91,7 @@ async def page_dashboard(request: Request, days: int = 14, cab: int | None = Non
     _conn.close()
     top_products = get_top_products_by_reviews(days, cabinet_id=cab_id, category=cat)
     categories = get_categories(days=max(days, 90), cabinet_id=cab_id)
+    rating_decline = get_rating_decline_products(cabinet_id=cab_id)
 
     # Helper to build URLs preserving current filters
     current_params = {"days": days}
@@ -122,7 +124,7 @@ async def page_dashboard(request: Request, days: int = 14, cab: int | None = Non
         "top_products": top_products, "days": days,
         "categories": categories, "current_cab": cab_id, "current_category": cat,
         "buildUrl": build_url, "date_from": date_from, "date_to": date_to,
-        "last_sync": last_sync,
+        "last_sync": last_sync, "rating_decline": rating_decline,
     })
 
 
@@ -271,13 +273,24 @@ async def api_save_settings(request: Request):
     settings = load_settings()
 
     bool_fields = [
-        "auto_reply_enabled", "auto_reply_positive", "auto_reply_negative",
-        "auto_reply_questions", "require_approval", "ai_enabled",
+        "auto_reply_enabled", "auto_reply_questions", "require_approval", "ai_enabled",
         "notify_new_reviews", "notify_new_questions",
+        "auto_reply_only_with_text", "auto_reply_skip_with_photos",
     ]
     for f in bool_fields:
         settings[f] = f in form
 
+    # Per-rating auto-reply settings
+    active_ratings = []
+    for r in range(1, 6):
+        if f"auto_reply_rating_{r}" in form:
+            active_ratings.append(r)
+    settings["auto_reply_ratings"] = active_ratings
+    # Keep legacy fields in sync for backward compatibility
+    settings["auto_reply_positive"] = any(r >= 4 for r in active_ratings)
+    settings["auto_reply_negative"] = any(r <= 3 for r in active_ratings)
+
+    settings["auto_reply_min_text_length"] = int(form.get("auto_reply_min_text_length", 0))
     settings["ai_tone"] = form.get("ai_tone", "friendly")
     settings["ai_custom_prompt"] = form.get("ai_custom_prompt", "")
     settings["ai_max_length"] = int(form.get("ai_max_length", 500))

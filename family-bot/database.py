@@ -624,6 +624,73 @@ def get_top_products_by_reviews(days: int = 7, limit: int = 5, cabinet_id: int |
     }
 
 
+def get_rating_decline_products(cabinet_id: int | None = None, threshold: float = 4.8,
+                                 recent_days: int = 14, min_reviews: int = 3) -> list:
+    """
+    Товары с падающим рейтингом: сравниваем средний рейтинг за последние N дней
+    vs средний рейтинг за все предыдущие дни (исключая последние N).
+    Возвращает товары, где рейтинг за последние дни ниже исторического
+    или ниже порога (4.8 по умолчанию).
+    """
+    conn = get_db()
+    cutoff = (datetime.now() - timedelta(days=recent_days)).isoformat()
+    flt = ""
+    params = []
+    if cabinet_id is not None:
+        flt = " AND cabinet_id = ?"
+        params = [cabinet_id]
+
+    rows = conn.execute(f"""
+        SELECT
+            product_id,
+            product_name,
+            -- Recent period (last N days)
+            AVG(CASE WHEN created_at >= ? THEN CAST(rating AS FLOAT) END) as recent_avg,
+            COUNT(CASE WHEN created_at >= ? THEN 1 END) as recent_count,
+            -- Historical (everything before last N days)
+            AVG(CASE WHEN created_at < ? THEN CAST(rating AS FLOAT) END) as historical_avg,
+            COUNT(CASE WHEN created_at < ? THEN 1 END) as historical_count,
+            -- Overall
+            AVG(CAST(rating AS FLOAT)) as overall_avg,
+            COUNT(*) as total_count
+        FROM reviews
+        WHERE product_id != '' AND rating > 0{flt}
+        GROUP BY product_id
+        HAVING recent_count >= ?
+    """, [cutoff, cutoff, cutoff, cutoff] + params + [min_reviews]).fetchall()
+    conn.close()
+
+    results = []
+    for r in rows:
+        recent_avg = r["recent_avg"]
+        historical_avg = r["historical_avg"]
+        if recent_avg is None:
+            continue
+
+        decline = 0.0
+        if historical_avg and historical_avg > 0:
+            decline = historical_avg - recent_avg
+
+        # Flag if: rating is declining OR recent avg is below threshold
+        if decline > 0.1 or (recent_avg < threshold):
+            results.append({
+                "product_id": r["product_id"],
+                "product_name": r["product_name"],
+                "recent_avg": round(recent_avg, 2),
+                "recent_count": r["recent_count"],
+                "historical_avg": round(historical_avg, 2) if historical_avg else None,
+                "historical_count": r["historical_count"] or 0,
+                "overall_avg": round(r["overall_avg"], 2),
+                "total_count": r["total_count"],
+                "decline": round(decline, 2),
+                "below_threshold": recent_avg < threshold,
+            })
+
+    # Sort by decline magnitude (biggest drops first)
+    results.sort(key=lambda x: x["decline"], reverse=True)
+    return results
+
+
 def get_sent_review_examples(limit: int = 20) -> list:
     """Get sent reviews with text as training examples for AI, diverse by rating"""
     conn = get_db()

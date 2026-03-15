@@ -36,6 +36,11 @@ DEFAULT_SETTINGS = {
     "auto_reply_positive": True,       # автоответ на 4-5 звёзд
     "auto_reply_negative": False,      # автоответ на 1-3 звёзды (осторожно)
     "auto_reply_questions": True,      # автоответ на вопросы
+    # Гибкие настройки: на какие именно рейтинги отвечать
+    "auto_reply_ratings": [5, 4],      # список рейтингов для автоответа (1-5)
+    "auto_reply_only_with_text": False,  # отвечать только на отзывы с текстом
+    "auto_reply_skip_with_photos": False,  # пропускать отзывы с фото (ручная проверка)
+    "auto_reply_min_text_length": 0,     # мин. длина текста для автоответа (0 = любой)
     "check_interval_minutes": 15,      # интервал проверки
     "ai_enabled": True,                # использовать AI для генерации
     "ai_tone": "friendly",             # тон: friendly, formal, casual, custom
