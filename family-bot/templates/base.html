@@ -22,21 +22,36 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .star { color: #f59e0b; }
         .toast { position: fixed; top: 1rem; right: 1rem; z-index: 50; }
+        /* Mobile sidebar */
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 35; }
+        .sidebar-overlay.active { display: block; }
+        @media (max-width: 767px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { padding-left: 0 !important; }
+            .topnav-link { padding: 8px 10px; font-size: 11px; }
+        }
     </style>
 </head>
 <body class="h-full bg-gray-50">
     <!-- Top Nav Bar -->
     <nav class="fixed top-0 left-0 right-0 z-50 bg-gray-900 flex items-center text-xs" style="height:39px">
+        <!-- Hamburger (mobile only) -->
+        <button id="hamburger-btn" onclick="toggleSidebar()" class="md:hidden flex items-center justify-center w-10 h-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
         <a href="https://sofiny-pro.ru" class="topnav-link px-4 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border-b-2 border-transparent">Sofiny</a>
         <a href="https://bot.sofiny-pro.ru" class="topnav-link px-4 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border-b-2 border-transparent">Ответто</a>
-        <a href="https://superset.sofiny-pro.ru" class="topnav-link px-4 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border-b-2 border-transparent">Дашборд</a>
-        <a href="https://dash.sofiny-pro.ru" class="topnav-link px-4 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border-b-2 border-transparent">Остатки</a>
+        <a href="https://superset.sofiny-pro.ru" class="topnav-link px-4 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border-b-2 border-transparent hidden sm:block">Дашборд</a>
+        <a href="https://dash.sofiny-pro.ru" class="topnav-link px-4 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border-b-2 border-transparent hidden sm:block">Остатки</a>
         <script>document.querySelectorAll('.topnav-link').forEach(function(a){if(a.href.includes(location.hostname)){a.className=a.className.replace('text-gray-400','text-white font-medium').replace('border-transparent','border-pink-400')}})</script>
     </nav>
 
     <div class="min-h-full" style="padding-top:39px">
+        <!-- Sidebar overlay (mobile) -->
+        <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
         <!-- Sidebar -->
-        <nav class="fixed left-0 w-64 bg-white border-r border-gray-200 z-40" style="top:39px;bottom:0">
+        <nav id="sidebar" class="sidebar fixed left-0 w-64 bg-white border-r border-gray-200 z-40" style="top:39px;bottom:0">
             <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
                 <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#7c3aed,#cb11ab);">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -90,8 +105,8 @@
         </nav>
 
         <!-- Main Content -->
-        <main class="pl-64">
-            <div class="px-8 py-6">
+        <main class="main-content md:pl-64">
+            <div class="px-4 py-4 md:px-8 md:py-6">
                 {% block content %}{% endblock %}
             </div>
         </main>
@@ -106,6 +121,20 @@
     <script>setTimeout(() => document.getElementById('toast')?.remove(), 3000);</script>
     {% endif %}
 
+    <script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+    }
+    // Close sidebar on nav link click (mobile)
+    if (window.innerWidth < 768) {
+        document.querySelectorAll('#sidebar .nav-link').forEach(function(a) {
+            a.addEventListener('click', function() { toggleSidebar(); });
+        });
+    }
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
